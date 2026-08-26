@@ -1,0 +1,39 @@
+{
+  "name": "restaurant-management-system",
+  "version": "1.0.0",
+  "description": "Cross-platform restaurant inventory management and ordering system",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "restaurant",
+    "inventory",
+    "management",
+    "ordering",
+    "cross-platform",
+    "react",
+    "react-native",
+    "nextjs"
+  ],
+  "author": "Restaurant Management Team",
+  "license": "MIT"
+}

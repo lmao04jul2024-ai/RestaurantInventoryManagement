@@ -1,0 +1,360 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  CUSTOMER
+  SERVER
+  KITCHEN
+  MANAGER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum InventoryUnit {
+  KG
+  G
+  L
+  ML
+  UNIT
+  BOX
+}
+
+// Core Models
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  email       String?
+  phone       String?
+  address     String?
+  theme       Json?    @default("{}")
+  features    Json?    @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  menus       Menu[]
+  orders      Order[]
+  tables      Table[]
+  inventory   InventoryItem[]
+  suppliers   Supplier[]
+  
+  @@index([slug])
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String
+  password    String
+  firstName   String
+  lastName    String
+  phone       String?
+  role        UserRole @default(CUSTOMER)
+  avatar      String?
+  isActive    Boolean  @default(true)
+  emailVerified Boolean @default(false)
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  orders      Order[]
+  reviews     Review[]
+  
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@index([email])
+}
+
+model Menu {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  categories  Category[]
+  
+  @@index([tenantId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  menuId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  menu        Menu     @relation(fields: [menuId], references: [id])
+  items       MenuItem[]
+  
+  @@index([menuId])
+}
+
+model MenuItem {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  price           Float
+  image           String?
+  preparationTime Int?     // in minutes
+  calories        Int?
+  protein         Float?
+  carbs           Float?
+  fat             Float?
+  isAvailable     Boolean  @default(true)
+  isVegetarian    Boolean  @default(false)
+  isVegan         Boolean  @default(false)
+  isGlutenFree    Boolean  @default(false)
+  categoryId      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  category        Category   @relation(fields: [categoryId], references: [id])
+  orderItems      OrderItem[]
+  
+  @@index([categoryId])
+  @@index([isAvailable])
+}
+
+model Table {
+  id          String   @id @default(uuid())
+  name        String
+  number      String
+  capacity    Int?
+  location    String?
+  qrCode      String?  @unique
+  isActive    Boolean  @default(true)
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  orders      Order[]
+  
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([qrCode])
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  orderNumber     String
+  status          OrderStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  totalAmount     Float
+  taxAmount       Float      @default(0)
+  discountAmount  Float      @default(0)
+  tableNumber     String?
+  specialRequests String?
+  customerId      String
+  tenantId        String
+  tableId         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+  
+  customer        User     @relation(fields: [customerId], references: [id])
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  table           Table?   @relation(fields: [tableId], references: [id])
+  items           OrderItem[]
+  payment         Payment?
+  reviews         Review[]
+  
+  @@unique([tenantId, orderNumber])
+  @@index([customerId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                 String   @id @default(uuid())
+  orderId            String
+  menuItemId         String
+  quantity           Int
+  unitPrice          Float
+  specialInstructions String?
+  status             OrderStatus @default(PENDING)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  order              Order    @relation(fields: [orderId], references: [id])
+  menuItem           MenuItem @relation(fields: [menuItemId], references: [id])
+  
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  orderId         String   @unique
+  amount          Float
+  method          String   // stripe, paypal, cash, etc.
+  transactionId   String?
+  status          PaymentStatus @default(PENDING)
+  metadata        Json?    @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  paidAt          DateTime?
+  
+  order           Order    @relation(fields: [orderId], references: [id])
+  
+  @@index([orderId])
+  @@index([transactionId])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  rating      Int      // 1-5
+  comment     String?
+  orderId     String   @unique
+  customerId  String
+  tenantId    String
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  order       Order    @relation(fields: [orderId], references: [id])
+  customer    User     @relation(fields: [customerId], references: [id])
+  
+  @@index([customerId])
+  @@index([tenantId])
+  @@index([isVisible])
+}
+
+model InventoryItem {
+  id              String   @id @default(uuid())
+  name            String
+  sku             String
+  currentStock    Float
+  minStock        Float
+  maxStock        Float?
+  unit            InventoryUnit @default(UNIT)
+  costPrice       Float?
+  sellingPrice    Float?
+  supplierId      String?
+  tenantId        String
+  isActive        Boolean  @default(true)
+  lastRestockedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  transactions    InventoryTransaction[]
+  
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([supplierId])
+}
+
+model InventoryTransaction {
+  id              String   @id @default(uuid())
+  itemId          String
+  transactionType String   // RESTOCK, USAGE, ADJUSTMENT, RETURN
+  quantity        Float
+  unitCost        Float?
+  reference       String?  // order number, invoice, etc.
+  notes           String?
+  performedBy     String?  // user id or name
+  tenantId        String
+  createdAt       DateTime @default(now())
+  
+  item            InventoryItem @relation(fields: [itemId], references: [id])
+  
+  @@index([itemId])
+  @@index([tenantId])
+  @@index([createdAt])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  inventory   InventoryItem[]
+  
+  @@index([tenantId])
+}
+
+// Multi-tenancy and feature flags
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isEnabled   Boolean  @default(false)
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isEnabled])
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  tenantId    String?
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  permissions String[] @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([key])
+  @@index([tenantId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([expiresAt])
+}

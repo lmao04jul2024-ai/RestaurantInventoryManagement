@@ -1,0 +1,94 @@
+# Cline Rules System
+
+## ⚠️ CRITICAL: MEMORY MCP INTEGRATION (MANDATORY)
+**FAILURE TO UPDATE MEMORY = TASK NOT COMPLETE**
+
+### Task Initialization (START)
+- **MUST** call Memory MCP to retrieve project history, preferences, and relevant contextual patterns
+- **MUST** read core context before generating specs or executing step 1
+
+### Task Termination (END) - BEFORE MARKING TASK COMPLETE
+- **MUST** update Memory MCP with:
+  - Architectural decisions made
+  - Updated project snapshots
+  - User preferences and requirements
+  - Key lessons learned
+  - Context shifts
+- **MUST** verify memory update succeeded before presenting final result
+- **MUST** provide status indicator: `[MEMORY BANK: UPDATED]`
+
+**REMEMBER**: If you finish a task without updating memory, you have FAILED the task.
+
+## Workflow Orchestration
+
+### 1. Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update tasks/lessons.md with the pattern and push a summary to your Memory MCP.
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes -- don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests -- then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+CRITICAL FAULT: The previous task concluded without updating the Memory MCP. 
+
+Per the Cline Rules System:
+1. Enter Plan Mode immediately to log this state lapse.
+2. Read the core context from the Memory MCP.
+3. Update 'tasks/lessons.md' with the failure pattern (skipping the termination memory push).
+4. Run the Task Termination sequence to save the updated project snapshot and architectural decisions.
+5. Provide the final status indicator: [MEMORY BANK: UPDATED]
+
+
+## Task Management
+
+1. **Read Core Context**: Call Memory MCP to initialize the task run context.
+2. **Plan First**: Write plan to tasks/todo.md with checkable items.
+3. **Verify Plan**: Check in before starting implementation.
+4. **Track Progress**: Mark items complete as you go.
+5. **Explain Changes**: High-level summary at each step.
+6. **Document Results**: Add review section to tasks/todo.md.
+7. **Commit Memory**: Update Memory MCP with task details, key lessons, and context shifts before wrapping up.
+
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+
+## ✅ TASK COMPLETION CHECKLIST
+Before marking ANY task as complete, verify:
+- [ ] Memory MCP updated with task details
+- [ ] Memory update confirmed successful
+- [ ] Status indicator `[MEMORY BANK: UPDATED]` provided
+- [ ] All deliverables verified working
+- [ ] Documentation updated if needed
+
+
