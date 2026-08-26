@@ -1,3 +1,11 @@
+/**
+ * Restaurant Management System — Web design tokens.
+ *
+ * Colors are defined as CSS variables in globals.css so tenants can be
+ * re-branded at runtime (Customization Engine) without rebuilding Tailwind.
+ * Every palette maps to `rgb(var(--xxx) / <alpha-value>)` so Tailwind opacity
+ * utilities (bg-primary-500/50 etc.) keep working.
+ */
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -9,17 +17,46 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: 'rgb(var(--color-primary-50) / <alpha-value>)',
+          100: 'rgb(var(--color-primary-100) / <alpha-value>)',
+          200: 'rgb(var(--color-primary-200) / <alpha-value>)',
+          300: 'rgb(var(--color-primary-300) / <alpha-value>)',
+          400: 'rgb(var(--color-primary-400) / <alpha-value>)',
+          500: 'rgb(var(--color-primary-500) / <alpha-value>)',
+          600: 'rgb(var(--color-primary-600) / <alpha-value>)',
+          700: 'rgb(var(--color-primary-700) / <alpha-value>)',
+          800: 'rgb(var(--color-primary-800) / <alpha-value>)',
+          900: 'rgb(var(--color-primary-900) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-primary-600) / <alpha-value>)',
         },
+        secondary: {
+          50: 'rgb(var(--color-secondary-50) / <alpha-value>)',
+          100: 'rgb(var(--color-secondary-100) / <alpha-value>)',
+          200: 'rgb(var(--color-secondary-200) / <alpha-value>)',
+          300: 'rgb(var(--color-secondary-300) / <alpha-value>)',
+          400: 'rgb(var(--color-secondary-400) / <alpha-value>)',
+          500: 'rgb(var(--color-secondary-500) / <alpha-value>)',
+          600: 'rgb(var(--color-secondary-600) / <alpha-value>)',
+          700: 'rgb(var(--color-secondary-700) / <alpha-value>)',
+          800: 'rgb(var(--color-secondary-800) / <alpha-value>)',
+          900: 'rgb(var(--color-secondary-900) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-secondary-600) / <alpha-value>)',
+        },
+        // Semantic tokens — safe zone for tenant overrides
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'surface-muted': 'rgb(var(--color-surface-muted) / <alpha-value>)',
+        'content-default': 'rgb(var(--color-content-default) / <alpha-value>)',
+        'content-muted': 'rgb(var(--color-content-muted) / <alpha-value>)',
+      },
+      fontFamily: {
+        sans: ['var(--font-family-sans)'],
+      },
+      borderRadius: {
+        DEFAULT: 'var(--radius)',
+        card: 'var(--radius-card)',
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
       },
     },
   },

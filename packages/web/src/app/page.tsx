@@ -1,24 +1,38 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="flex min-h-screen items-center bg-surface-muted">
       <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Restaurant Management System
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-lg font-bold text-primary-600">🍽️ Restaurant Manager</p>
+          <h1 className="mb-4 mt-2 text-4xl font-bold text-content-default sm:text-5xl">
+            Inventory & orders,
+            <br /> one cross-platform system.
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Cross-platform solution for inventory management and ordering
+          <p className="text-xl text-content-muted">
+            Web, mobile and QR self-ordering — customizable per brand.
           </p>
-          <div className="space-x-4">
-            <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
-              Get Started
-            </button>
-            <button className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition">
-              Learn More
-            </button>
+          <div className="mt-8 space-x-4">
+            <Link
+              href="/login"
+              className="inline-block rounded bg-primary-600 px-6 py-3 font-medium text-white transition-colors hover:bg-primary-700"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/register"
+              className="inline-block rounded border border-gray-300 px-6 py-3 font-medium text-content-default transition-colors hover:bg-surface"
+            >
+              Create account
+            </Link>
           </div>
+          <p className="mt-6 text-xs text-content-muted">
+            Staff workspace requires sign-in · Customer ordering launches in Phase 2
+          </p>
         </div>
       </div>
     </main>
   );
 }
+

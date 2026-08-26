@@ -2,26 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens (single source of truth referenced by tailwind.config.js).
+ * Runtime re-branding (per-tenant Customization Engine) simply overwrites
+ * these variables on :root — no rebuild required.
+ * Values are raw RGB triplets, e.g. "59 130 246".
+ */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  /* Primary palette — default "brand blue"; overridden per tenant */
+  --color-primary-50: 239 246 255;
+  --color-primary-100: 219 234 254;
+  --color-primary-200: 191 219 254;
+  --color-primary-300: 147 197 253;
+  --color-primary-400: 96 165 250;
+  --color-primary-500: 59 130 246;
+  --color-primary-600: 37 99 235;
+  --color-primary-700: 29 78 216;
+  --color-primary-800: 30 64 175;
+  --color-primary-900: 30 58 138;
+
+  /* Secondary palette */
+  --color-secondary-50: 240 253 250;
+  --color-secondary-100: 204 251 241;
+  --color-secondary-200: 153 246 228;
+  --color-secondary-300: 94 234 212;
+  --color-secondary-400: 45 212 191;
+  --color-secondary-500: 20 184 166;
+  --color-secondary-600: 13 148 136;
+  --color-secondary-700: 15 118 110;
+  --color-secondary-800: 17 94 89;
+  --color-secondary-900: 19 78 74;
+
+  /* Semantic surfaces & text (light theme defaults) */
+  --color-surface: 255 255 255;
+  --color-surface-muted: 249 250 251;
+  --color-content-default: 17 24 39;
+  --color-content-muted: 107 114 128;
+
+  /* Typography & shape */
+  --font-family-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --radius: 0.5rem;
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --color-surface: 17 24 39;
+    --color-surface-muted: 31 41 55;
+    --color-content-default: 249 250 251;
+    --color-content-muted: 156 163 175;
   }
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  color: rgb(var(--color-content-default));
+  background-color: rgb(var(--color-surface));
 }
+

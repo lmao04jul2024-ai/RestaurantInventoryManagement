@@ -29,13 +29,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **3.5** Create tenant middleware for multi-tenant isolation
 - [x] **3.6** Set up password reset and email verification
 
-### Week 4: Frontend Core - Web App Setup
-- [ ] **4.1** Initialize Next.js 14+ with App Router
-- [ ] **4.2** Set up Tailwind CSS with design token system
-- [ ] **4.3** Create base layout components (Header, Sidebar, Footer)
-- [ ] **4.4** Implement authentication pages (Login, Register, Forgot Password)
-- [ ] **4.5** Set up React Query for server state management
-- [ ] **4.6** Create protected route wrapper and auth hooks
+### Week 4: Frontend Core - Web App Setup ✅ *completed*
+- [x] **4.1** Initialize Next.js 14+ with App Router (route groups: `(auth)`, `(dashboard)`)
+- [x] **4.2** Set up Tailwind CSS with design token system (CSS-variable palettes mapped in tailwind.config; runtime re-branding ready)
+- [x] **4.3** Create base layout components (Header, Sidebar w/ role-gated nav, Footer, UserMenu)
+- [x] **4.4** Implement authentication pages (Login, Register, Forgot Password, Reset Password) with react-hook-form + zod
+- [x] **4.5** Set up React Query for server state management (+ axios client with single-flight token refresh)
+- [x] **4.6** Create protected route wrapper and auth hooks (`ProtectedRoute` with hydration-safe gating, `useAuth`, role guard)
 
 ### Week 5: Mobile App Setup & Shared Components
 - [ ] **5.1** Initialize React Native project with TypeScript
