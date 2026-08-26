@@ -1,7 +1,14 @@
-# Dependencies
+# Dependencies — exclude ALL node_modules (root + every nested workspace package)
+**/node_modules/
 node_modules/
+
+# Alternative package manager stores (yarn/pnpm/bun)
+.yarn/
 .pnp
 .pnp.js
+.pnp.cjs
+.pnpm-store/
+.bun/
 
 # Build outputs
 dist/
