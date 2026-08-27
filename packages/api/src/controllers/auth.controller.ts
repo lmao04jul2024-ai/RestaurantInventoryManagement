@@ -120,10 +120,8 @@ export async function login(req: TenantRequest, res: Response, next: NextFunctio
     }
 
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: data.email.toLowerCase() }, { email_tenantId: { email: data.email.toLowerCase(), tenantId } }],
-        isActive: true,
-      },
+      // Identity is scoped per tenant: same email can exist in two restaurants.
+      where: { email: data.email.toLowerCase(), tenantId, isActive: true },
     });
 
     // Uniform response to prevent user enumeration

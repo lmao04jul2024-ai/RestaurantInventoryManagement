@@ -59,3 +59,134 @@ export function validateBody<T>(schema: Joi.ObjectSchema<T>, body: unknown): T {
 
   return value;
 }
+
+/** Query-string variant of validateBody (same envelope semantics). */
+export function validateQuery<T>(schema: Joi.ObjectSchema<T>, query: unknown): T {
+  return validateBody(schema, query);
+}
+
+/** Route-parameter variant of validateBody. */
+export function validateParams<T>(schema: Joi.ObjectSchema<T>, params: unknown): T {
+  return validateBody(schema, params);
+}
+
+// ── Menu domain schemas ────────────────────────────────────────────────────────
+
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const timeString = Joi.string().pattern(HH_MM).message('"{{#label}}" must be a 24h "HH:mm" time');
+const daysOfWeek = Joi.array()
+  .items(Joi.number().integer().min(0).max(6))
+  .max(7)
+  .unique();
+
+const uuid = Joi.string().uuid();
+
+export const createMenuSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(120).required(),
+  description: Joi.string().trim().max(500),
+});
+
+export const createCategorySchema = Joi.object({
+  name: Joi.string().trim().min(1).max(120).required(),
+  description: Joi.string().trim().max(500),
+  icon: Joi.string().trim().max(16),
+  sortOrder: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().default(true),
+  /** When present, places the category under a parent (subcategory). */
+  parentId: uuid.allow(null),
+});
+
+export const updateCategorySchema = Joi.object({
+  name: Joi.string().trim().min(1).max(120),
+  description: Joi.string().trim().max(500).allow(null),
+  icon: Joi.string().trim().max(16).allow(null),
+  sortOrder: Joi.number().integer().min(0),
+  isActive: Joi.boolean(),
+  parentId: uuid.allow(null),
+}).min(1);
+
+export const createMenuItemSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(200).required(),
+  description: Joi.string().trim().max(2000),
+  price: Joi.number().greater(0).precision(2).required(),
+  categoryId: uuid.required(),
+  image: Joi.string().trim().max(2048).allow(null),
+  preparationTime: Joi.number().integer().min(0).max(480),
+  calories: Joi.number().integer().min(0),
+  protein: Joi.number().min(0).precision(1),
+  carbs: Joi.number().min(0).precision(1),
+  fat: Joi.number().min(0).precision(1),
+  isAvailable: Joi.boolean().default(true),
+  isVegetarian: Joi.boolean().default(false),
+  isVegan: Joi.boolean().default(false),
+  isGlutenFree: Joi.boolean().default(false),
+});
+
+export const updateMenuItemSchema = createMenuItemSchema.fork(
+  ['name', 'price', 'categoryId'],
+  (field) => field.optional(),
+);
+
+export const menuItemQuerySchema = Joi.object({
+  q: Joi.string().trim().max(200),
+  categoryId: uuid,
+  available: Joi.boolean(),
+  vegetarian: Joi.boolean(),
+  vegan: Joi.boolean(),
+  glutenFree: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(50).default(20),
+  sort: Joi.string().valid('name', 'price_asc', 'price_desc', 'newest').default('newest'),
+});
+
+export const pricingRuleSchema = Joi.object({
+  adjustmentType: Joi.string().valid('PERCENT_DISCOUNT', 'FIXED_PRICE').required(),
+  amount: Joi.when('adjustmentType', [
+    // Percent off must land in (0..100]; fixed prices are any positive amount.
+    { is: 'PERCENT_DISCOUNT', then: Joi.number().greater(0).max(100).required() },
+    { is: 'FIXED_PRICE', then: Joi.number().greater(0).max(1_000_000).required() },
+  ]),
+  name: Joi.string().trim().max(120),
+  daysOfWeek: daysOfWeek.default([]),
+  startTime: timeString.allow(null),
+  endTime: timeString.allow(null),
+  priority: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().default(true),
+});
+
+export const updatePricingRuleSchema = pricingRuleSchema.fork(
+  ['adjustmentType', 'amount'],
+  (field) => field.optional(),
+);
+
+export const availabilityWindowSchema = Joi.object({
+  name: Joi.string().trim().max(120),
+  daysOfWeek: daysOfWeek.default([]),
+  startTime: timeString.allow(null),
+  endTime: timeString.allow(null),
+  isActive: Joi.boolean().default(true),
+});
+
+export const updateAvailabilityWindowSchema = availabilityWindowSchema.min(1);
+
+export const availabilityToggleSchema = Joi.object({
+  isAvailable: Joi.boolean().required(),
+});
+
+export const effectiveAtQuerySchema = Joi.object({
+  at: Joi.date().iso(),
+});
+
+// ── Menu domain param schemas ─────────────────────────────────────────────────
+
+export const menuIdParamSchema = Joi.object({ menuId: uuid.required() });
+export const idParamSchema = Joi.object({ id: uuid.required() });
+export const itemWithRuleIdParamSchema = Joi.object({
+  id: uuid.required(),
+  ruleId: uuid.required(),
+});
+export const itemWithWindowIdParamSchema = Joi.object({
+  id: uuid.required(),
+  windowId: uuid.required(),
+});
+export const windowIdInBodySchema = Joi.object({ windowId: uuid });

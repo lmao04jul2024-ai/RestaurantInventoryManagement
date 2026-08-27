@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth.routes';
+import menuRoutes from './routes/menu.routes';
 
 dotenv.config();
 
@@ -47,10 +48,9 @@ app.get('/', (_req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/menus', menuRoutes);
 
 // TODO: mount additional routes in coming weeks:
-// app.use('/api/users', userRoutes);
-// app.use('/api/menus', menuRoutes);
 // app.use('/api/orders', orderRoutes);
 // app.use('/api/inventory', inventoryRoutes);
 

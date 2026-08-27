@@ -7,5 +7,9 @@ module.exports = {
   setupFiles: ['<rootDir>/tests/jest.setup.ts'],
   testMatch: ['<rootDir>/tests/**/*.spec.ts'],
   moduleFileExtensions: ['ts', 'js'],
+  // Map the workspace package to SOURCE so ts-jest transforms it (dist may be stale)
+  moduleNameMapper: {
+    '^@restaurant/shared$': '<rootDir>/../../packages/shared/src/index.ts',
+  },
   clearMocks: true,
 };
