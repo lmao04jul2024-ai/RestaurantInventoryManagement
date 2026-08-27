@@ -94,3 +94,6 @@ export interface OrderItem {
 // ── Design tokens (see ./tokens.ts — single source of truth for all platforms) ──
 export * from './tokens';
 
+// ── Menu pricing & availability engine (see ./menu.ts) ────────────────────────
+export * from './menu';
+
