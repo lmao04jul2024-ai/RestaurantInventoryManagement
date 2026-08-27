@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-gate:
+    name: Lint → Build → Test (all workspaces)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # engines demand >=18; 20 is the current LTS line we build against
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (lockfile-exact)
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: packages/api
+        run: npx prisma generate
+
+      - name: Build shared package first
+        run: npm run build -w @restaurant/shared
+
+      - name: Lint all workspaces
+        run: npm run lint
+
+      - name: Test all workspaces
+        run: npm test
