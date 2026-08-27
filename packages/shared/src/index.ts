@@ -90,3 +90,7 @@ export interface OrderItem {
   unitPrice: number;
   specialInstructions?: string;
 }
+
+// ── Design tokens (see ./tokens.ts — single source of truth for all platforms) ──
+export * from './tokens';
+
