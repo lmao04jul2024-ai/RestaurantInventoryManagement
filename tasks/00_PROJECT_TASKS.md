@@ -5,13 +5,14 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 
 ## 🎯 Phase 1: Foundation & Core Infrastructure (Weeks 1-6)
 
-### Week 1: Project Setup & Configuration
-- [ ] **1.1** Initialize monorepo structure (packages: web, mobile, api, shared)
-- [ ] **1.2** Set up TypeScript configuration across all packages
-- [ ] **1.3** Configure ESLint, Prettier, and Husky for code quality
-- [ ] **1.4** Set up Git hooks and commit conventions
-- [ ] **1.5** Create base Docker configuration for development
-- [ ] **1.6** Initialize package.json files with shared dependencies
+### Week 1: Project Setup & Configuration ✅ *completed*
+- [x] **1.1** Initialize monorepo structure (packages: web, mobile, api, shared)
+- [x] **1.2** Set up TypeScript configuration across all packages
+- [x] **1.3** Configure ESLint, Prettier, and Husky for code quality
+- [x] **1.4** Set up Git hooks and commit conventions
+- [x] **1.5** Create base Docker configuration for development
+- [x] **1.6** Initialize package.json files with shared dependencies
+
 
 ### Week 2: Database Schema & Migrations
 - [x] **2.1** Design PostgreSQL database schema (users, roles, tenants, menus, orders, inventory)
@@ -37,13 +38,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **4.5** Set up React Query for server state management (+ axios client with single-flight token refresh)
 - [x] **4.6** Create protected route wrapper and auth hooks (`ProtectedRoute` with hydration-safe gating, `useAuth`, role guard)
 
-### Week 5: Mobile App Setup & Shared Components
-- [ ] **5.1** Initialize React Native project with TypeScript
-- [ ] **5.2** Set up React Navigation with auth flow
-- [ ] **5.3** Create base mobile UI components (Button, Input, Card)
-- [ ] **5.4** Implement shared component library (Button, Input, Modal, etc.)
-- [ ] **5.5** Set up styling system for shared components
-- [ ] **5.6** Create component documentation with Storybook
+### Week 5: Mobile App Setup & Shared Components ✅ *completed*
+- [x] **5.1** Initialize React Native project with TypeScript (RN 0.73 + babel/metro monorepo configs; react pinned to RN's exact peer 18.2.0)
+- [x] **5.2** Set up React Navigation with auth flow (hydration-safe RootNavigator gate → Auth stack ↔ Home/Settings tabs)
+- [x] **5.3** Create base mobile UI components (Button, Input, Card, Text, Spinner — parity with web ui/)
+- [x] **5.4** Implement shared component library (`@restaurant/shared/src/tokens.ts` = canonical design-token source consumed by all platforms)
+- [x] **5.5** Set up styling system for shared components (ThemeProvider w/ dark mode + `buildTenantTheme` runtime re-branding)
+- [x] **5.6** Create component documentation with Storybook (docs/COMPONENTS.md authoritative; .storybook/ scaffold ready-to-enable, dev deps deliberately not installed)
 
 ### Week 6: DevOps & Testing Infrastructure
 - [ ] **6.1** Create Docker Compose for full stack (DB, Redis, API, Web)

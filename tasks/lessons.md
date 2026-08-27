@@ -1,0 +1,36 @@
+# Lessons Learned
+
+## L001 — Task Termination memory push was skipped
+- **Date:** 2026-08-27
+- **Pattern:** A previous task concluded without updating the Memory MCP (project snapshot / architectural decisions were never persisted). CRITICAL FAULT logged by the rules system.
+- **Rule going forward:** Before presenting any final result, ALWAYS run the termination sequence: update Memory MCP (decisions, snapshot, preferences, lessons) → verify success → append `[MEMORY BANK: UPDATED]`. No exceptions, even for small fixes.
+- **Check:** If my final message lacks `[MEMORY BANK: UPDATED]`, the task is not complete.
+
+## L002 — Prisma client missing in npm-workspaces monorepos
+- **Date:** 2026-08-27
+- **Symptom:** `Error: Cannot find module '.prisma/client/default'` from `node_modules/@prisma/client/default.js` when starting `@restaurant/api`.
+- **Root causes found:**
+  1. `prisma generate` had never been run (fresh install; no postinstall hook existed).
+  2. Schema validation blocked regeneration: `ApiKey.permissions String[] @default("{}")` — Prisma list fields must default to a list, not a JSON string (`{}` works only for `Json?` fields like Tenant.theme/features).
+- **Fix applied:**
+  1. Changed default to `String[] @default([])` in `packages/api/prisma/schema.prisma:343`.
+  2. Ran `npx prisma generate` from `packages/api` → generated to hoisted `node_modules/.prisma/client/`.
+  3. Added `"postinstall": "prisma generate"` to `packages/api/package.json` so future installs self-heal.
+- **General rule:** In npm/yarn/pnpm workspaces, Prisma generates into the hoisted root `node_modules/.prisma/client`; any run of `npm install` without a subsequent `prisma generate` (or without a postinstall hook) breaks `require('@prisma/client')`. Always wire `postinstall` in the workspace that owns the schema. Note: `npx <tool>` inside a workspace shell command may surface as `npm notice run ...` wrappers (npm ≥11 behavior) — cosmetic, not an error.
+- **Diagnostic tip:** When generate output says "Generated Prisma Client to ./../../node_modules/@prisma/client", the real generated code lives in sibling `node_modules/.prisma/client/`; if `Cannot find module '.prisma/client/default'` persists, check whether schema validation failed BEFORE assuming path issues (Prisma still exits nonzero there — check for P1012).
+
+## L003 — react version must be EXACT-pinned next to react-native in workspaces
+- **Date:** 2026-08-27
+- **Symptom:** Adding any dependency to packages/mobile triggered `ERESOLVE`: `Found react@18.3.1 ... Conflicting peer dependency: react@18.2.0 from react-native@0.73.x`.
+- **Root cause:** react-native pins an EXACT react peer (e.g. 18.2.0), while `^18.2.0` resolves 18.3.x at the workspace root for web's benefit; once installed, stale copies under `packages/mobile/node_modules/react` shadow later fixes and keep showing `invalid` in `npm ls`.
+- **Fix/Rules:**
+  1. In packages/mobile/package.json use exact `"react": "18.2.0"` and `"react-test-renderer": "18.2.0"` (match your RN minor's pinned peer — never a caret).
+  2. After changing resolution intent, delete stale nested modules: `rm -rf packages/<ws>/node_modules && npm install`.
+  3. Never reach for `--legacy-peer-deps`; it masks a real duplicate-runtime bug.
+
+## L004 — Sandbox npm lifecycle scripts are blocked behind approval
+- **Date:** 2026-08-27
+- **Pattern:** This machine's npm wrapper prints `npm warn install-scripts ... Run npm install-scripts ls/approve` and SKIPS every package postinstall/preinstall, including our new `prisma generate` self-heal in @restaurant/api.
+- **Impact:** Dependency installs succeed but generated artifacts won't refresh automatically here; run `npx prisma generate` manually from packages/api when schema changes until scripts are approved.
+- **Also:** When batching a long `npm install` with quick follow-up checks in the SAME response, the checks may race the installer — sequence installs before verification probes.
+
