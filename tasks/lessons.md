@@ -53,3 +53,12 @@
 - **Repair recipe (worked end-to-end):** backup root lock → JSON-excise ONLY those exact `packages/<ws>/node_modules/<pkg>` keys → `rm -rf` the nested dirs on disk → `npm install` reconciles → verify `npm ls --workspace <ws> | grep -c invalid` == 0.
 - **Extension of L003:** whenever any exact-pin changes in a workspace, AUDIT the lock for that workspace-scoped subkey — manifest edits alone do not sanitize embedded entries.
 
+## L008 — Timezone-invariant test fixtures & Joi param-validation ordering
+- **Date:** 2026-08-27
+- **Timezone lesson:** The sandbox machine runs Nepal Time (UTC+5:45, half-hour offset). A "compensating" ISO helper that manually added/subtracted `getTimezoneOffset()` was inverted and produced wall times off by 5:45h, silently driving window/availability assertions. **Rule:** to build a fixture instant that round-trips deterministically, just do `new Date(y, m, d, h, min).toISOString()` and parse it back with `new Date(iso)` — JS Date handles the offset for you; never hand-roll offset math in fixtures. Memory note: `new Date(2026, 1, 2).getDay()` == 1 (Monday) when 2026-02-01 is a Sunday.
+- **Validation ordering lesson:** Controllers that call `validateParams` FIRST can throw VALIDATION_ERROR before an ownership/missing-row check runs. When a test's param value isn't a well-formed UUID, validation masks the deeper 404 logic. **Rule:** for tests targeting ownership/downstream guards, always pass schema-valid UUIDs in params; reserve malformed values for dedicated validation tests.
+- **Prisma include typing lesson:** `export const INCLUDE = {...} as const` freezes Include args into a readonly tuple literal that Prisma's mutable `OrderByWithRelationInput[]` rejects. Annotate the include as `Prisma.MenuItemInclude` instead of `as const`.
+- **Latent-auth-bug caught by typecheck:** `findFirst({ where: { OR: [{...}, { email_tenantId: {...} }] } })` is invalid — compound-unique keys are only legal inside `where` of a single lookup that targets that unique (findUnique/upsert/findFirst-only-when-unique-match). The login intent was a tenant-scoped email lookup; simplified to a plain `{ email, tenantId }` filter (correct multi-tenant semantics AND typechecks).
+
+
+

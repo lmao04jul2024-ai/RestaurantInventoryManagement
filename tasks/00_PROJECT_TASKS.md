@@ -56,13 +56,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 
 ## 🚀 Phase 2: Core Features & Integrations (Weeks 7-12)
 
-### Week 7: Menu Management System
-- [ ] **7.1** Create menu item CRUD API endpoints
-- [ ] **7.2** Implement menu categories and subcategories
-- [ ] **7.3** Add menu item images and nutritional information
-- [ ] **7.4** Create menu management UI for admin dashboard
-- [ ] **7.5** Implement menu item search and filtering
-- [ ] **7.6** Add menu item availability and pricing rules
+### Week 7: Menu Management System ✅ *completed*
+- [x] **7.1** Create menu item CRUD API endpoints (`/api/menus/items` × GET/POST/PATCH/DELETE + availability toggle; auth + resolveTenant + `requirePermission('menu:read')`/`requireRoleOrHigher(MANAGER)` gates; tenant isolation chains item → category → menu.tenantId)
+- [x] **7.2** Implement menu categories and subcategories (Category self-relation parentId + same-menu validation + cycle guard; category CRUD; nested-tree `GET /menus/:menuId/categories`; delete guarded by children/items counts)
+- [x] **7.3** Add menu item images and nutritional information (image/prep-time/calories/macros fields on MenuItem exposed + Joi-validated + editable in admin UI)
+- [x] **7.4** Create menu management UI for admin dashboard (`(dashboard)/dashboard/menu` — React Query service/hooks, search/filter/sort toolbar, paginated item cards, create/edit modal, rules & window editors)
+- [x] **7.5** Implement menu item search and filtering (q case-insensitive name/description, category-with-subtree expansion, availability + dietary booleans, 4 sorts, page/limit pagination)
+- [x] **7.6** Add menu item availability and pricing rules (MenuPricingRule + MenuItemAvailabilityWindow models; shared pure engine `computeEffectivePrice`/`isMenuItemAvailableNow` with priority/day-of-week/overnight-window semantics; `/effective` endpoint with `?at=` preview)
 
 ### Week 8: Inventory Management
 - [ ] **8.1** Create inventory tracking API endpoints

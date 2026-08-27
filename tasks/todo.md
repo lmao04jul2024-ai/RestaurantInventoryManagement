@@ -1,3 +1,34 @@
+# Session Todo — 2026-08-27 (Week 7)
+
+Context restored from Memory MCP. Roadmap position: Weeks 1–6 done — **Phase 1 COMPLETE (36/144)**, git clean at `40daa9f`. This session starts Phase 2.
+
+## 0. Housekeeping
+- [x] Read Memory MCP graph + tasks/lessons.md (L001–L007 reviewed)
+- [x] Written plan; began Week 7 — Menu Management System
+
+## Week 7 — Menu Management System
+- [x] **7.1** Menu item CRUD API endpoints (`/api/menus/items` + auth/RBAC/tenant middleware)
+- [x] **7.2** Categories & subcategories (self-relation parentId; category CRUD; tree endpoint)
+- [x] **7.3** Images & nutritional info (schema fields already present → expose + validate + UI)
+- [x] **7.5** Search & filtering (q, category, availability, dietary tags, sort, pagination)
+- [x] **7.6** Availability & pricing rules — API + shared engine DONE (31 shared + 19 api tests); UI PENDING
+- [x] **7.4** Admin menu management UI (`(dashboard)/dashboard/menu` React Query page) — DONE
+
+## Verification
+- [x] `npx prisma validate/generate` after schema change — valid, client regenerated
+- [x] Shared unit tests for pricing/availability engine green — 31
+- [x] API controller specs (tenant scoping, RBAC gates, filters, effective pricing) green — 19 new (api total 48)
+- [x] Root `npm test` fan-out green — **95 total** (api 48 / shared 31 / web 11 / mobile 5)
+- [x] `tsc --noEmit` exit 0 (shared, api, web)
+- [x] ESLint clean on api (0 errors) + web (0 warnings/errors)
+
+## Wrap-up
+- [x] Tick `tasks/00_PROJECT_TASKS.md` Week 7 checkboxes — Phase 2 W1 done (42/144)
+- [x] Logical commits: schema+shared engine `168700c` → api `236fb45` → web `763a3da` → bookkeeping
+- [ ] Memory MCP termination push + `[MEMORY BANK: UPDATED]`
+
+---
+
 # Session Todo — 2026-08-27 (Week 6)
 
 ## 0. Deps
