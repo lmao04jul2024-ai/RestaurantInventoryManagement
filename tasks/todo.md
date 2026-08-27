@@ -1,3 +1,40 @@
+# Session Todo — 2026-08-27 (Week 6)
+
+## 0. Deps
+- [x] Install @testing-library/react@14 + jest-environment-jsdom@29 (web); mobile: zero deps — bundled RN preset discovered
+
+## Week 6 — DevOps & Testing Infrastructure
+- [x] **6.3** Jest configs: shared (new test script), api (ts-jest + JWT_SECRET setup), web (jsdom + aliases + tsconfig.jest jsx fix), mobile (bundled-RN preset directory-form)
+- [x] **6.4** RTL wiring on web (jest-dom setup; ProtectedRoute + Button suites pass)
+- [x] **6.5** Utilities: api factories/mock-express; web factories/next-navigation mock
+- [x] **6.6** Suites: 58 green — shared 13, api 29, web 11, mobile 5
+- [x] **6.1** Docker: api-production Prisma-client fix, npm ci builders, compose version-drop
+- [x] **6.2** CI: .github/workflows/ci.yml (npm ci → prisma generate → build shared → lint → test)
+
+## Wrap-up
+- [x] Tracker ticks (Phase 1 COMPLETE: 36/144); lessons L005–L007
+- [x] Logical commits: test stack, docker fix, ci workflow, task bookkeeping
+- [x] Memory MCP termination push — verified via open_nodes
+
+---
+## Review
+**Shipped:** Per-package Jest 29 stacks; 58-test matrix (`npm test` fan-out);
+RTL14+jsdom29 on web; ts-jest-specific patterns documented in-config;
+factories/mocks utilities; Dockerfile api-production root-cause fix (prisma CLI
+gap) + npm ci determinism; GitHub Actions quality gate.
+**Incident resolved:** react runtime tear in web tests (nested
+react-dom@18.3.1 × root-bound zustand hooks → `null.useRef`) — root cause:
+fossilized `packages/web/node_modules/react{,-dom}@18.3.1` LOCK entries that
+survived purge/npm ci; excised keys, tree dedupes to unified react@18.2.0,
+web pinned exactly 18.2.0 (extends L003 — never caret next to RN-shared
+monorepos).
+**Key learnings logged:** L005 ts-jest/mock-module import order; L006
+@react-native/jest-preset has NO 0.7x npm release (use bundled RN root
+preset, directory form); L007 lock-fossil surgery procedure.
+**Follow-ups raised:** @types/jest explicit in web/mobile devDeps (currently
+hoist-resolved, deterministic under npm ci but implicit); Storybook enable
+(unchanged deferral); httpOnly cookie hardening (pre-existing).
+
 # Session Todo — 2026-08-27 (continue)
 
 Context restored from Memory MCP. Roadmap position: Weeks 1–4 done (24/144). Pending items

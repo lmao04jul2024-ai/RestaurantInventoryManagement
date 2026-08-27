@@ -34,3 +34,22 @@
 - **Impact:** Dependency installs succeed but generated artifacts won't refresh automatically here; run `npx prisma generate` manually from packages/api when schema changes until scripts are approved.
 - **Also:** When batching a long `npm install` with quick follow-up checks in the SAME response, the checks may race the installer — sequence installs before verification probes.
 
+## L005 — Cross-module jest.mock requires import ORDER under ts-jest (no magic hoisting across files)
+- **Date:** 2026-08-27
+- **Symptom:** Spec mocked `next/navigation` from a helper module yet the component under test threw `invariant expected app router to be mounted`.
+- **Root cause:** ts-jest hoists same-file `jest.mock()` calls fine, but mocks living in a SEPARATE helper module are ordinary side-effectful imports — whatever captured the real module namespace first keeps it.
+- **Rule:** In every spec file, import mock/helper modules BEFORE anything that resolves the mocked target (comment-marked import-order contract at top of protected-route.spec.tsx). When diagnostics show the REAL dependency acting inside the component, suspect capture-before-mock first.
+
+## L006 — @react-native/jest-preset has NO npm releases in the 0.7x band; use react-native's bundled preset
+- **Date:** 2026-08-27
+- **Discovery:** Registry lookup confirmed zero `0.7x` versions of the scoped preset package; installing it for RN 0.73 fails with ETARGET.
+- **Fix:** react-native@0.73.11 ships a complete root `jest-preset.js`. Reference by DIRECTORY (Jest appends `/jest-preset.js`; file-path form errors): `preset: '<rootDir>/../../node_modules/react-native'`.
+- **Mobile test scope note:** pure-logic/token-mapping suites avoid native-runtime graphs entirely — ts-jest elides type-only RN imports when isolatedModules stays OFF; no extra native mocking needed until component-level RN tests arrive.
+
+## L007 — Exact-pin changes leave FOSSILIZED lockfile entries that survive npm ci (react dedupe repair recipe)
+- **Date:** 2026-08-27
+- **Symptom:** After pinning web react to 18.2.0, nested `packages/web/node_modules/react{-dom}@18.3.1` persisted; `npm ls` printed `invalid: ... from packages/web`; `npm install --force` was a silent no-op; even full purge + `npm ci` RE-MATERIALIZED the stale copies.
+- **Root cause:** arborist never pruned lock keys `packages/web/node_modules/react` / `-dom` written pre-pin — ci restores exactly what the lock records, fossils included.
+- **Repair recipe (worked end-to-end):** backup root lock → JSON-excise ONLY those exact `packages/<ws>/node_modules/<pkg>` keys → `rm -rf` the nested dirs on disk → `npm install` reconciles → verify `npm ls --workspace <ws> | grep -c invalid` == 0.
+- **Extension of L003:** whenever any exact-pin changes in a workspace, AUDIT the lock for that workspace-scoped subkey — manifest edits alone do not sanitize embedded entries.
+

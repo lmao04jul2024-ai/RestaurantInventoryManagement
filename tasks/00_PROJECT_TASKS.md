@@ -46,13 +46,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **5.5** Set up styling system for shared components (ThemeProvider w/ dark mode + `buildTenantTheme` runtime re-branding)
 - [x] **5.6** Create component documentation with Storybook (docs/COMPONENTS.md authoritative; .storybook/ scaffold ready-to-enable, dev deps deliberately not installed)
 
-### Week 6: DevOps & Testing Infrastructure
-- [ ] **6.1** Create Docker Compose for full stack (DB, Redis, API, Web)
-- [ ] **6.2** Set up GitHub Actions CI/CD pipeline
-- [ ] **6.3** Configure Jest for unit testing across packages
-- [ ] **6.4** Set up React Testing Library for component tests
-- [ ] **6.5** Create test utilities and factories
-- [ ] **6.6** Write initial tests for core functionality
+### Week 6: DevOps & Testing Infrastructure ✅ *completed*
+- [x] **6.1** Create Docker Compose for full stack (DB, Redis, API, Web) — hardened: obsolete `version:` dropped; **fixed latent bug**: api-production kept devDeps + runs `prisma generate` (pure prod-install omitted the prisma CLI → shipped image crashed on boot); builders upgraded to reproducible `npm ci`
+- [x] **6.2** Set up GitHub Actions CI/CD pipeline — `.github/workflows/ci.yml` single quality-gate: setup-node20+npm-cache → `npm ci` → explicit prisma generate → shared-first build → lint → `npm test` fan-out
+- [x] **6.3** Configure Jest for unit testing across packages — per-package `jest.config.cjs`: shared(node)+new test script, api(node/ts-jest/env-seeding setupFile), web(jsdom+alias mapper+standalone `tsconfig.jest.json` fixing Next's jsx:"preserve"), mobile(bundled RN preset)
+- [x] **6.4** Set up React Testing Library for component tests — `@testing-library/react@14` + `jest-environment-jsdom@29` on web; jest-dom matchers via setupFilesAfterEnv
+- [x] **6.5** Create test utilities and factories — api: user/tenant factories + typed Express res double (`mock-express`); web: AuthUser factory + `next/navigation` mock (import-order contract documented)
+- [x] **6.6** Write initial tests for core functionality — **58 tests green**: api jwt/rbac/tenant middleware (29), shared token behavioral pins (13), web ProtectedRoute hydration-gate/Button (11), mobile createAppTheme mapping (5)
 
 ## 🚀 Phase 2: Core Features & Integrations (Weeks 7-12)
 
