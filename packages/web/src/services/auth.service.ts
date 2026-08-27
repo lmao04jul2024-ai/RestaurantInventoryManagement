@@ -9,7 +9,6 @@ import type {
 } from '@/types';
 
 type LoginResponse = AuthTokens & { user: AuthUser };
-type RefreshResponse = AuthTokens;
 
 /** All endpoints match packages/api/src/routes/auth.routes.ts */
 export const authService = {

@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/auth.store';
 const hydrateAs = () => {
   jest.spyOn(useAuthStore.persist, 'hasHydrated').mockReturnValue(true);
   jest.spyOn(useAuthStore.persist, 'onFinishHydration').mockImplementation((cb) => {
-    cb();
+    cb({} as never);
     return () => {};
   });
 };
