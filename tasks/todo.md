@@ -24,8 +24,8 @@ from last session: uncommitted Prisma fix (verified working) → commit; then We
 
 ## 4. Wrap-up
 - [x] Update `tasks/00_PROJECT_TASKS.md` checkboxes (incl. backfill Week 1 ✓)
-- [ ] Commit Week 5 work in logical commits
-- [ ] Memory MCP termination push (snapshot, decisions, lessons) → `[MEMORY BANK: UPDATED]`
+- [x] Commit Week 5 work in logical commits — fb53c3b mobile, 46a66c0 shared, cb5e1ed tracker/lessons (prisma fix 9387432 earlier same day)
+- [x] Memory MCP termination push (snapshot, decisions, lessons) — verified via open_nodes after write → `[MEMORY BANK: UPDATED]`
 
 ## Review
 **Shipped:** prisma fix commit `9387432`; shared token source-of-truth (palettes,
