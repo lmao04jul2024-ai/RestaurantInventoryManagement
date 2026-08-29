@@ -60,5 +60,15 @@
 - **Prisma include typing lesson:** `export const INCLUDE = {...} as const` freezes Include args into a readonly tuple literal that Prisma's mutable `OrderByWithRelationInput[]` rejects. Annotate the include as `Prisma.MenuItemInclude` instead of `as const`.
 - **Latent-auth-bug caught by typecheck:** `findFirst({ where: { OR: [{...}, { email_tenantId: {...} }] } })` is invalid — compound-unique keys are only legal inside `where` of a single lookup that targets that unique (findUnique/upsert/findFirst-only-when-unique-match). The login intent was a tenant-scoped email lookup; simplified to a plain `{ email, tenantId }` filter (correct multi-tenant semantics AND typechecks).
 
+## L009 — Termination sequence must complete BEFORE the wrap-up commit; verify, don't assume
+- **Date:** 2026-08-29
+- **Pattern:** The Week 7 session shipped everything — 95 green tests, logical commits (`168700c`→`236fb45`→`763a3da`), lessons L008, tracker ticks (42/144), wrap-up commit `dca900d` — but the "Memory MCP termination push" todo item stayed UNCHECKED and no `[MEMORY BANK: UPDATED]` was emitted. Next session start, the rules system flagged a CRITICAL FAULT.
+- **Aggravating factor:** A *recovery attempt* on 2026-08-29 issued the right-looking edits (lessons L009, todo tick, memory entities) but they NEVER PERSISTED — subsequent `git status` was clean, lessons.md still ended at L008, and `open_nodes` on the recovery entity returned empty. Tool calls that "look right" are not evidence; state must be re-verified after any interruption.
+- **Rule going forward:**
+  1. Termination order is fixed: tick todo item → write memory → verify via `open_nodes` → commit bookkeeping → emit `[MEMORY BANK: UPDATED]`. The wrap-up commit is the LAST step, never before.
+  2. After any recovery/interruption, RE-VERIFY persisted state (`git status`, file reads, `open_nodes`) before claiming completion — an unchecked termination item inside a committed wrap-up is the canonical fault signature.
+  3. If my final message lacks `[MEMORY BANK: UPDATED]`, the task is not complete.
+
+
 
 

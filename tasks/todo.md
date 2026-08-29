@@ -25,11 +25,49 @@ Context restored from Memory MCP. Roadmap position: Weeks 1–6 done — **Phase
 ## Wrap-up
 - [x] Tick `tasks/00_PROJECT_TASKS.md` Week 7 checkboxes — Phase 2 W1 done (42/144)
 - [x] Logical commits: schema+shared engine `168700c` → api `236fb45` → web `763a3da` → bookkeeping
-- [ ] Memory MCP termination push + `[MEMORY BANK: UPDATED]`
+- [x] Memory MCP termination push + `[MEMORY BANK: UPDATED]` *(delayed — recovered 2026-08-29, see lesson L009)*
+
+## Review
+**Shipped:** Week 7 Menu Management System (Phase 2 W1, 42/144). Schema: Category
+self-relation parentId (subcategories + cycle guard), MenuPricingRule,
+MenuItemAvailabilityWindow, PricingAdjustmentType enum. Shared pure
+pricing/availability engine (`computeEffectivePrice`, `isMenuItemAvailableNow`,
+`windowMatchesAt`) — 31 tests. API: item/category CRUD, subcategory tree,
+search & filters, rules & windows, `/effective` preview — 48 api tests,
+tenant-scoped + RBAC-gated. Web: `/dashboard/menu` admin UI (React Query,
+search/filter/sort toolbar, item cards, rule & window editors).
+**Gate:** root `npm test` 95 green (api 48 / shared 31 / web 11 / mobile 5);
+tsc + eslint clean. **Learnings:** L008. **Process gap closed:** termination
+push recovered 2026-08-29 (L009). **Next up:** Week 8 — Inventory Management.
 
 ---
 
-# Session Todo — 2026-08-27 (Week 6)
+# Session Todo — 2026-08-29 (Week 8 — Inventory Management)
+
+Context restored from Memory MCP. Roadmap position: Weeks 1–7 done (42/144), git clean at `dca900d`. Schema baseline: InventoryItem / InventoryTransaction / Supplier exist; PurchaseOrder does NOT.
+
+## 0. Housekeeping
+- [x] Recover Week 7 termination push (L009 + todo tick + memory entities) — committed
+- [x] Review lessons L001–L009
+
+## Week 8 — Inventory Management
+- [ ] **8.1** Inventory tracking API endpoints (items CRUD + stock transactions with atomic stock mutation)
+- [ ] **8.2** Stock level monitoring & alerts (low-stock endpoint + status derivation)
+- [ ] **8.3** Supplier management system (CRUD + supplier-scoped item listing)
+- [ ] **8.4** Inventory dashboard for managers (web UI)
+- [ ] **8.5** Purchase order management (schema PurchaseOrder/PurchaseOrderItem + API + receive flow)
+- [ ] **8.6** Inventory reporting & analytics (valuation, consumption, transaction history)
+
+## Verification
+- [ ] `npx prisma validate/generate` after schema change
+- [ ] API controller specs green (tenant scoping, RBAC, stock math)
+- [ ] Root `npm test` fan-out green
+- [ ] `tsc --noEmit` + eslint clean (api + web)
+
+## Wrap-up
+- [ ] Tick `tasks/00_PROJECT_TASKS.md` Week 8 checkboxes
+- [ ] Logical commits (schema → api → web → bookkeeping)
+- [ ] Memory MCP termination push IN ORDER per L009: tick → write → verify → commit → indicator
 
 ## 0. Deps
 - [x] Install @testing-library/react@14 + jest-environment-jsdom@29 (web); mobile: zero deps — bundled RN preset discovered
