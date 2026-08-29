@@ -203,3 +203,31 @@ Context: Weeks 1–8 done (48/144), git clean. Schema already has Order/OrderIte
 - **9.6** `/dashboard/orders` dashboard: summary cards, status filter, lifecycle actions, card payment collection, cancel; New Order tab building a ticket from available menu items.
 - **Tests:** 26 API order tests + 8 web service tests. Lesson **L013**: Joi object schemas reject undefined payloads — mirror Express's always-object `req.query` in unit tests.
 - **Commit split:** api (controller/routes/events/rbac/validation/tests) → web (types/service/hooks/components/pages/nav/tests) → bookkeeping (tracker/todo/lessons).
+
+---
+
+# Session Todo — 2026-08-29 (Week 10 — Customer Features: Menu & Ordering)
+
+Context: Weeks 1–9 done (54/144), git clean at `8061614`. Fault recovery: L014 logged + memory delta push for the post-Week-9 artifact commits. CUSTOMER already holds `menu:read`, `order:create:own`, `order:read:own`; `OrderItem.specialInstructions` + order-level `specialRequests` exist in schema and create schema. Gap: `POST /orders/:id/pay` is `requireRoleOrHigher(SERVER)` → customers cannot self-settle.
+
+## 0. Housekeeping
+- [x] Read Memory MCP graph + lessons L001–L014
+- [x] Fault recovery: L014 + memory delta push (artifact commits after Week 9 termination)
+
+## Week 10 — Customer Features (Menu & Ordering)
+- [ ] **10.1** Customer menu browsing — `(shop)` route group + customer shell (ProtectedRoute CUSTOMER, shop header w/ cart pill) + `/menu` (categories w/ subtree, search, dietary filters, sort, pagination, item cards)
+- [ ] **10.2** Shopping cart — `store/cart.store.ts` (zustand persist; merge by item+instructions; qty caps; subtotal/count selectors)
+- [ ] **10.3** Order customization — item customizer modal (qty + per-line specialInstructions) + order-level specialRequests at checkout
+- [ ] **10.4** Order placement & payment — `/checkout` (line editing, CARD/ONLINE self-service) + API: open pay route to customers with own-order guard, no CASH self-service, amount forced to total, SIM transactionId
+- [ ] **10.5** Order confirmation & receipt — `/orders/[id]` placed banner, status timeline, printable receipt, pay-now for unpaid
+- [ ] **10.6** Customer order history — `/orders` list (API already scopes CUSTOMER-own) + login redirects CUSTOMER → /menu + type fixes (PaymentMethod −MOBILE, transactionRef→transactionId)
+
+## Verification
+- [ ] API pay specs green — customer self-pay, foreign-order 403, CASH 400, amount forced; full suite ≥ 115
+- [ ] Web cart store specs green; order.service pay payload passthrough spec
+- [ ] Full gate: api tsc + eslint + jest; web tsc + jest + eslint + next build (routes /menu, /checkout, /orders, /orders/[id])
+
+## Wrap-up
+- [ ] Tracker ticks (60/144); lessons if any; todo close-out
+- [ ] Logical commits (api → web → bookkeeping)
+- [ ] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
