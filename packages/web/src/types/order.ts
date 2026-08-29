@@ -62,12 +62,23 @@ export interface Order {
   table?: { id: string; label: string } | null;
   payment?: Payment | null;
   items: OrderItem[];
+  /** Review attached to this order (at most one). Week 11 — for post-order rating. */
+  reviews?: ReviewLite[];
 }
 
 export interface CustomerLite {
   id: string;
   firstName: string;
   lastName: string;
+}
+
+/** Minimal review shape embedded in order responses (Week 11). */
+export interface ReviewLite {
+  id: string;
+  rating: number;
+  comment: string | null;
+  isVisible: boolean;
+  createdAt: string;
 }
 
 export interface OrderListQuery {

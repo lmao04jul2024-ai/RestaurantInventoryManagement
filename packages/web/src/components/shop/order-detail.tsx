@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/menu-ui';
 import { getApiErrorMessage } from '@/lib/api';
 import { useOrder, usePayOrder } from '@/hooks/use-orders';
 import type { OrderStatus } from '@/types/order';
+import ReviewForm from '@/components/shop/review-form';
 
 const TIMELINE: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED'];
 
@@ -179,6 +180,14 @@ export default function OrderDetail({ id }: { id: string }) {
           Order more →
         </Link>
       </div>
+
+      {/* Week 11.3 — review/rate after completion */}
+      {order.status === 'COMPLETED' && (
+        <ReviewForm
+          orderId={order.id}
+          existing={order.reviews?.[0] ?? null}
+        />
+      )}
 
       {/* Print stylesheet: only the receipt card survives printing. */}
       <style>{`

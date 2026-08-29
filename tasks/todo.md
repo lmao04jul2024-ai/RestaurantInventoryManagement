@@ -206,6 +206,30 @@ Context: Weeks 1–8 done (48/144), git clean. Schema already has Order/OrderIte
 
 ---
 
+# Session Todo — 2026-08-29 (Week 11 — Customer Features: Tracking & Reviews)
+
+Context: Weeks 1–10 done (60/144), git clean at `a01f107`. Review model exists (rating 1–5, comment, orderId @unique, isVisible) + `review:create:own` on CUSTOMER; order detail already polls (10s). No schema changes required this week (User has firstName/lastName/phone).
+
+## Week 11 — Tracking & Reviews
+- [ ] **11.1** Real-time order tracking — `/orders/[id]` tracking upgrade: 5s polling while active (idle when closed), Live indicator, per-item KDS status on receipt lines
+- [ ] **11.2** Order status notifications — `OrderNotifications` provider in shop layout: 15s poll of active orders, status-diff vs persisted `rms-order-notified` map, toast stack; gated by account preference
+- [x] **11.3** Customer review & rating system — API `/api/reviews` (create for own COMPLETED order w/ unique guard 409 REVIEW_EXISTS, mine list, staff list, moderate visibility, delete; RBAC + `review:read:own` grant) + web star-rating form/display on the order page
+- [ ] **11.4** Review management for admin — `/dashboard/reviews` (MANAGER/ADMIN): avg-rating summary, rating/visibility filters, show-hide + delete; sidebar + dashboard home card
+- [x] **11.5** Customer feedback collection — post-completion "Rate your experience" prompt on order page (review = feedback mechanism per data model)
+- [ ] **11.6** Customer profile & preferences — API `GET/PATCH /users/me` (names/phone, Joi-validated, sanitized) + `/account` page: profile form (auth store updated in place) + preferences card (status notifications toggle via persisted prefs store)
+
+## Verification
+- [x] API review specs (11) + user controller green; tsc + eslint src clean (11.3/11.4/11.5 complete)
+- [ ] Web review/service specs (5) green; tsc clean (pre-existing cart.store.spec errors unrelated); next build (routes /account, /account/reviews, /dashboard/reviews — deferred to 11.4/11.6)
+- [ ] Full fan-out: api 125/125 + web 43/43 (shared + mobile) all green
+
+## Wrap-up
+- [ ] Tracker ticks (66/144); lessons if any; todo close-out
+- [ ] Logical commits (api → web → bookkeeping)
+- [ ] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
+
+---
+
 # Session Todo — 2026-08-29 (Week 10 — Customer Features: Menu & Ordering)
 
 Context: Weeks 1–9 done (54/144), git clean at `8061614`. Fault recovery: L014 logged + memory delta push for the post-Week-9 artifact commits. CUSTOMER already holds `menu:read`, `order:create:own`, `order:read:own`; `OrderItem.specialInstructions` + order-level `specialRequests` exist in schema and create schema. Gap: `POST /orders/:id/pay` is `requireRoleOrHigher(SERVER)` → customers cannot self-settle.

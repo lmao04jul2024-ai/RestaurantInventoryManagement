@@ -33,6 +33,11 @@ const ORDER_INCLUDE = {
   customer: { select: { id: true, firstName: true, lastName: true } },
   table: { select: { id: true, name: true, number: true } },
   payment: true,
+  // Week 11: the (at most one) review attached to the order, for the
+  // confirmation page's "Rate your experience" / display surface.
+  // Prisma generates `reviews` (plural array) because the schema uses
+  // `reviews Review[]` even though the @unique FK makes it effectively 1:1.
+  reviews: { select: { id: true, rating: true, comment: true, isVisible: true, createdAt: true } },
   items: {
     include: { menuItem: { select: { id: true, name: true, price: true, image: true } } },
     orderBy: { createdAt: 'asc' },

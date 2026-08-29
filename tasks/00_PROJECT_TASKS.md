@@ -91,9 +91,9 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 ### Week 11: Customer Features - Tracking & Reviews
 - [ ] **11.1** Create real-time order tracking interface
 - [ ] **11.2** Implement order status notifications
-- [ ] **11.3** Add customer review and rating system
+- [x] **11.3** Add customer review and rating system
 - [ ] **11.4** Create review management for admin
-- [ ] **11.5** Implement customer feedback collection
+- [x] **11.5** Implement customer feedback collection
 - [ ] **11.6** Add customer profile and preferences
 
 ### Week 12: QR Code System & QappR Integration

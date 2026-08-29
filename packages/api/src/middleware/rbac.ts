@@ -106,7 +106,7 @@ export function requireRoleOrHigher(minimumRole: UserRole) {
  * Maps role -> list of allowed permissions
  */
 export const PERMISSIONS: Record<UserRole, string[]> = {
-  [UserRole.CUSTOMER]: ['menu:read', 'order:create:own', 'order:read:own', 'review:create:own'],
+  [UserRole.CUSTOMER]: ['menu:read', 'order:create:own', 'order:read:own', 'review:create:own', 'review:read:own'],
   [UserRole.SERVER]: [
     'menu:read',
     'order:create',

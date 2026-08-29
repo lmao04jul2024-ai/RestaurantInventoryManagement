@@ -387,3 +387,30 @@ export const orderWithItemIdParamSchema = Joi.object({
 export const orderSummaryQuerySchema = Joi.object({
   days: Joi.number().integer().min(1).max(365).default(30),
 });
+
+// ── Review domain schemas (Week 11) ───────────────────────────────────────────
+
+export const createReviewSchema = Joi.object({
+  orderId: uuid.required(),
+  rating: Joi.number().integer().min(1).max(5).required(),
+  comment: Joi.string().trim().max(1000).allow(null),
+});
+
+export const reviewQuerySchema = Joi.object({
+  rating: Joi.number().integer().min(1).max(5),
+  isVisible: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
+export const reviewVisibilitySchema = Joi.object({
+  isVisible: Joi.boolean().required(),
+});
+
+// ── User profile schemas (Week 11) ────────────────────────────────────────────
+
+export const updateProfileSchema = Joi.object({
+  firstName: Joi.string().trim().min(1).max(100),
+  lastName: Joi.string().trim().min(1).max(100),
+  phone: Joi.string().trim().max(20).allow(null),
+}).min(1);

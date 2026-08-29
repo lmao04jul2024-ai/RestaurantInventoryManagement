@@ -10,6 +10,8 @@ import inventoryRoutes from './routes/inventory.routes';
 import supplierRoutes from './routes/supplier.routes';
 import purchaseOrderRoutes from './routes/purchase-order.routes';
 import orderRoutes from './routes/order.routes';
+import reviewRoutes from './routes/review.routes';
+import userRoutes from './routes/user.routes';
 
 dotenv.config();
 
@@ -57,6 +59,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);
