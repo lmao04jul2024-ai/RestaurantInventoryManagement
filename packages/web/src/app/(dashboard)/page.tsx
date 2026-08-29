@@ -6,8 +6,8 @@ import { useAuth } from '@/hooks/use-auth';
 import type { UserRole } from '@/types';
 
 const PLACEHOLDERS: Array<{ title: string; desc: string; href?: string }> = [
-  { title: 'Menu Management', desc: 'Create categories & items — arrives Week 7.', href: '/dashboard/menu' },
-  { title: 'Inventory', desc: 'Stock levels, suppliers & transactions — Week 7–8.' },
+  { title: 'Menu Management', desc: 'Categories, items, pricing & availability — live.', href: '/dashboard/menu' },
+  { title: 'Inventory', desc: 'Stock, suppliers & purchase orders — live.', href: '/dashboard/inventory' },
   { title: 'Kitchen Display', desc: 'Live order queue for the pass — Week 8.', href: '/dashboard/kitchen' },
   { title: 'Reports', desc: 'Sales & waste analytics — Phase 3.' },
 ];
