@@ -7,8 +7,9 @@ import type { UserRole } from '@/types';
 
 const PLACEHOLDERS: Array<{ title: string; desc: string; href?: string }> = [
   { title: 'Menu Management', desc: 'Categories, items, pricing & availability — live.', href: '/dashboard/menu' },
+  { title: 'Orders', desc: 'Order taking, workflow & payments — live.', href: '/dashboard/orders' },
   { title: 'Inventory', desc: 'Stock, suppliers & purchase orders — live.', href: '/dashboard/inventory' },
-  { title: 'Kitchen Display', desc: 'Live order queue for the pass — Week 8.', href: '/dashboard/kitchen' },
+  { title: 'Kitchen Display', desc: 'Live order queue for the pass — live.', href: '/dashboard/kitchen' },
   { title: 'Reports', desc: 'Sales & waste analytics — Phase 3.' },
 ];
 
