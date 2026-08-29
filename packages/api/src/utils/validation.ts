@@ -329,3 +329,61 @@ export const itemWithPoItemIdParamSchema = Joi.object({
 });
 
 export const poIdParamSchema = Joi.object({ id: uuid.required() });
+
+// ── Order domain schemas (Week 9) ─────────────────────────────────────────────
+
+export const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const;
+export const PAYMENT_METHODS = ['CASH', 'CARD', 'ONLINE'] as const;
+
+const orderLineSchema = Joi.object({
+  menuItemId: uuid.required(),
+  quantity: Joi.number().integer().min(1).max(99).required(),
+  specialInstructions: Joi.string().trim().max(300).allow(null),
+});
+
+export const createOrderSchema = Joi.object({
+  customerId: uuid.allow(null),
+  tableId: uuid.allow(null),
+  specialRequests: Joi.string().trim().max(500).allow(null),
+  items: Joi.array().items(orderLineSchema).min(1).max(50).required(),
+});
+
+export const updateOrderSchema = Joi.object({
+  specialRequests: Joi.string().trim().max(500).allow(null),
+  tableId: uuid.allow(null),
+}).min(1);
+
+export const orderQuerySchema = Joi.object({
+  status: Joi.string().valid(...ORDER_STATUSES),
+  tableId: uuid,
+  customerId: uuid,
+  mine: Joi.boolean(),
+  from: Joi.date().iso(),
+  to: Joi.date().iso(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
+export const orderStatusSchema = Joi.object({
+  status: Joi.string().valid(...ORDER_STATUSES).required(),
+});
+
+/** Kitchen line progress only ever advances PREPARING or READY. */
+export const orderItemStatusSchema = Joi.object({
+  status: Joi.string().valid('PREPARING', 'READY').required(),
+});
+
+export const payOrderSchema = Joi.object({
+  method: Joi.string().valid(...PAYMENT_METHODS).required(),
+  amount: Joi.number().positive().precision(2),
+  transactionId: Joi.string().trim().max(120).allow(null),
+});
+
+export const orderWithItemIdParamSchema = Joi.object({
+  id: uuid.required(),
+  itemId: uuid.required(),
+});
+
+export const orderSummaryQuerySchema = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+});

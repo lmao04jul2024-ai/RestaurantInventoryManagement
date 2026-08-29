@@ -43,6 +43,34 @@ export function requireRole(...roles: UserRole[]) {
 }
 
 /**
+ * Permission-based middleware — passes when the user holds ANY of the listed
+ * permissions (e.g. CUSTOMER's granular `order:create:own` vs staff `order:create`).
+ */
+export function requireAnyPermission(...permissions: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: {
+          code: 'UNAUTHENTICATED',
+          message: 'Authentication required before permission check',
+        },
+      });
+    }
+
+    if (!permissions.some((permission) => hasPermission(req.user!.role, permission))) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN_PERMISSION',
+          message: `Missing one of required permissions: ${permissions.join(', ')}`,
+        },
+      });
+    }
+
+    next();
+  };
+}
+
+/**
  * RBAC middleware factory - allows the given role AND any higher-privilege roles
  * Usage: router.put('/menus/:id', requireRoleOrHigher(UserRole.MANAGER), handler)
  */
