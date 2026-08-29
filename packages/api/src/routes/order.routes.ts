@@ -22,7 +22,9 @@ const router = Router();
 // Every tenant member may read orders; CUSTOMER rows are narrowed to their own
 // inside the controller. Mutations require staff (SERVER and above); the status
 // and KDS-line endpoints key off the `order:update:status` permission so KITCHEN
-// staff qualify without holding broader order rights.
+// staff qualify without holding broader order rights. Payment collection is
+// staff (`order:create`) — plus CUSTOMERs self-settling their own tickets
+// (`order:create:own`) through the simulated gateway (Week 10).
 router.use(authenticate);
 router.use(resolveTenant);
 
@@ -39,6 +41,6 @@ router.patch('/:id', requireRoleOrHigher(UserRole.SERVER), updateOrder);
 router.patch('/:id/status', requirePermission('order:update:status'), updateOrderStatus);
 router.post('/:id/cancel', requireRoleOrHigher(UserRole.SERVER), cancelOrder);
 router.patch('/:id/items/:itemId/status', requirePermission('order:update:status'), updateOrderItemStatus);
-router.post('/:id/pay', requireRoleOrHigher(UserRole.SERVER), payOrder);
+router.post('/:id/pay', requireAnyPermission('order:create', 'order:create:own'), payOrder);
 
 export default router;

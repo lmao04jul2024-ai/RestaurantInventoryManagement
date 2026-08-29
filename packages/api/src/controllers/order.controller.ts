@@ -424,6 +424,30 @@ export async function payOrder(req: TenantRequest, res: Response, next: NextFunc
     const data = validateBody(payOrderSchema, req.body);
 
     const order = await findOrderForTenant(tenantId, id);
+
+    // Week 10 — customers self-settle their own tickets (order:create:own).
+    // Staff keep collecting for anyone and may still take CASH at the counter.
+    if (isCustomer(req)) {
+      if (order.customerId !== req.user!.userId) {
+        throw httpError(403, 'ORDER_FORBIDDEN', 'Customers may only pay their own orders');
+      }
+      if (data.method === 'CASH') {
+        throw httpError(
+          400,
+          'CASH_NOT_SELF_SERVICE',
+          'Cash payments are collected by staff at the counter',
+        );
+      }
+      // Self-service settles the exact ticket total through the simulated gateway.
+      data.amount = order.totalAmount;
+      data.transactionId =
+        data.transactionId ??
+        `SIM-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)
+          .toUpperCase()}`;
+    }
+
     if (order.status === OrderStatus.CANCELLED) {
       throw httpError(409, 'ORDER_CANCELLED', 'Cannot collect payment on a cancelled order');
     }

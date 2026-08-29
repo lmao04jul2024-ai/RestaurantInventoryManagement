@@ -38,7 +38,7 @@ import prisma from '../src/services/database';
 import type { TenantRequest } from '../src/middleware/tenant';
 import type { MockRes } from './helpers/mock-express';
 import { asRequest, createRes } from './helpers/mock-express';
-import { makeMenuRow, makeOrderItemRow, makeOrderRow } from './factories/order';
+import { makeMenuRow, makeOrderRow } from './factories/order';
 import { publishOrderEvent, subscribeOrderEvents } from '../src/services/order-events';
 
 /** Joi uuid validation requires real-shaped identifiers in params/bodies. */
@@ -448,6 +448,92 @@ describe('payment collection (9.4/9.6)', () => {
     });
 
     expect(next.mock.calls[0][0]).toMatchObject({ code: 'ORDER_CANCELLED', statusCode: 409 });
+  });
+});
+
+describe('customer self-service payment (10.4)', () => {
+  const { payOrder } = require('../src/controllers/order.controller');
+
+  const customerReq = (userId: string): Partial<TenantRequest> => ({
+    ...tenantReq({
+      user: { userId, tenantId: 'tenant-1', role: 'CUSTOMER' } as TenantRequest['user'],
+    }),
+  });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('settles the customer’s own PENDING ticket, forcing the amount to the snapshotted total', async () => {
+    // Call 1: ownership lookup (unpaid); call 2: reload after payment.
+    (prisma.order.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'order-1',
+        customerId: 'cust-1',
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        totalAmount: 42.5,
+      })
+      .mockResolvedValueOnce(makeOrderRow({ paymentStatus: 'PAID' }));
+    (prisma.payment.upsert as jest.Mock).mockResolvedValue({});
+    (prisma.order.update as jest.Mock).mockResolvedValue({});
+
+    const { res } = await run(payOrder, {
+      ...customerReq('cust-1'),
+      params: { id: oid },
+      body: { method: 'CARD', amount: 1 }, // client-supplied amount must be overridden
+    });
+
+    const upsert = (prisma.payment.upsert as jest.Mock).mock.calls[0][0];
+    expect(upsert.create).toMatchObject({
+      amount: 42.5,
+      method: 'CARD',
+      status: 'PAID',
+      paidAt: expect.any(Date),
+    });
+    expect(upsert.create.transactionId).toMatch(/^SIM-/);
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      where: { id: oid },
+      data: { paymentStatus: 'PAID' },
+    });
+    expect(publishOrderEvent).toHaveBeenCalledWith('tenant-1', { type: 'order:paid', orderId: oid });
+    expect(bodyOf(res)).toMatchObject({ data: { paymentStatus: 'PAID' } });
+  });
+
+  it('rejects CASH self-service with 400', async () => {
+    (prisma.order.findFirst as jest.Mock).mockResolvedValue({
+      id: 'order-1',
+      customerId: 'cust-1',
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      totalAmount: 20,
+    });
+
+    const { next } = await run(payOrder, {
+      ...customerReq('cust-1'),
+      params: { id: oid },
+      body: { method: 'CASH' },
+    });
+
+    expect(next.mock.calls[0][0]).toMatchObject({ code: 'CASH_NOT_SELF_SERVICE', statusCode: 400 });
+    expect(prisma.payment.upsert).not.toHaveBeenCalled();
+  });
+
+  it('hides other customers’ orders behind 403', async () => {
+    (prisma.order.findFirst as jest.Mock).mockResolvedValue({
+      id: 'order-1',
+      customerId: 'cust-2',
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      totalAmount: 20,
+    });
+
+    const { next } = await run(payOrder, {
+      ...customerReq('cust-1'),
+      params: { id: oid },
+      body: { method: 'CARD' },
+    });
+
+    expect(next.mock.calls[0][0]).toMatchObject({ code: 'ORDER_FORBIDDEN', statusCode: 403 });
+    expect(prisma.payment.upsert).not.toHaveBeenCalled();
   });
 });
 
