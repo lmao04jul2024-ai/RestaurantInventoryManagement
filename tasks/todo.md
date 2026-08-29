@@ -51,23 +51,43 @@ Context restored from Memory MCP. Roadmap position: Weeks 1–7 done (42/144), g
 - [x] Review lessons L001–L009
 
 ## Week 8 — Inventory Management
-- [ ] **8.1** Inventory tracking API endpoints (items CRUD + stock transactions with atomic stock mutation)
-- [ ] **8.2** Stock level monitoring & alerts (low-stock endpoint + status derivation)
-- [ ] **8.3** Supplier management system (CRUD + supplier-scoped item listing)
-- [ ] **8.4** Inventory dashboard for managers (web UI)
-- [ ] **8.5** Purchase order management (schema PurchaseOrder/PurchaseOrderItem + API + receive flow)
-- [ ] **8.6** Inventory reporting & analytics (valuation, consumption, transaction history)
+- [x] **8.1** Inventory tracking API endpoints (items CRUD + stock transactions with atomic stock mutation)
+- [x] **8.2** Stock level monitoring & alerts (low-stock endpoint + status derivation)
+- [x] **8.3** Supplier management system (CRUD + supplier-scoped item listing)
+- [x] **8.4** Inventory dashboard for managers (web UI)
+- [x] **8.5** Purchase order management (schema PurchaseOrder/PurchaseOrderItem + API + receive flow)
+- [x] **8.6** Inventory reporting & analytics (valuation, consumption, transaction history)
 
 ## Verification
-- [ ] `npx prisma validate/generate` after schema change
-- [ ] API controller specs green (tenant scoping, RBAC, stock math)
-- [ ] Root `npm test` fan-out green
-- [ ] `tsc --noEmit` + eslint clean (api + web)
+- [x] `npx prisma validate/generate` after schema change — valid; client regenerated with PurchaseOrder models
+- [x] API controller specs green (tenant scoping, RBAC, stock math) — 37 new (api total 85)
+- [x] Root `npm test` fan-out green — web suite +37% (20 total)
+- [x] `tsc --noEmit` + eslint clean (api + web); `next build` routed `/dashboard/inventory` successfully
 
 ## Wrap-up
-- [ ] Tick `tasks/00_PROJECT_TASKS.md` Week 8 checkboxes
-- [ ] Logical commits (schema → api → web → bookkeeping)
-- [ ] Memory MCP termination push IN ORDER per L009: tick → write → verify → commit → indicator
+- [x] Tick `tasks/00_PROJECT_TASKS.md` Week 8 checkboxes — Phase 2 W2 done (48/144)
+- [x] Logical commits (schema → api → web → bookkeeping)
+- [x] Memory MCP termination push IN ORDER per L009: tick → write → verify → commit → indicator
+
+## Review
+**Shipped:** Week 8 Inventory Management (Phase 2 W2, 48/144). Schema:
+PurchaseOrderStatus enum + PurchaseOrder/PurchaseOrderItem with back-relations
+(Tenant, Supplier, InventoryItem). API: `/api/inventory` (items CRUD,
+SKU-unique + tenant-bound supplier checks, delete-in-use guard, atomic
+RESTOCK/USAGE/ADJUSTMENT/RETURN transactions, low-stock alerts derived from
+current ≤ min via field reference, valuation + 30-day consumption reports,
+paginated transaction history) — 15 specs; `/api/suppliers` CRUD + delete guard
+(8 specs); `/api/purchase-orders` full lifecycle incl. $transaction receive flow
+(post-line progress + RESTOCK tx + stock increment + status all-or-nothing,
+partial vs full receipt, over-receipt/foreign-line guards, DRAFT-only edit/delete)
+— 14 specs. Web: `/dashboard/inventory` tabbed dashboard with reorder alerts,
+valuation & consumption cards, inline +1/Use-1 stock moves, supplier registry,
+PO create/submit/cancel/receive — 9 service specs.
+**Gate:** api 85 tests, web 20 tests — all green; tsc + eslint clean; next build
+OK. **Learnings:** L010 (JSX insert-assembly hazards), L011 (nested-object Jest
+matching needs recursive objectContaining), L012 (`res.json` mock leaves
+statusCode undefined). **Next up:** Week 9 — Order Processing System
+(order API, status workflow, KDS, notifications).
 
 ## 0. Deps
 - [x] Install @testing-library/react@14 + jest-environment-jsdom@29 (web); mobile: zero deps — bundled RN preset discovered

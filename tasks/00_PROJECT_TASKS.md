@@ -64,13 +64,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **7.5** Implement menu item search and filtering (q case-insensitive name/description, category-with-subtree expansion, availability + dietary booleans, 4 sorts, page/limit pagination)
 - [x] **7.6** Add menu item availability and pricing rules (MenuPricingRule + MenuItemAvailabilityWindow models; shared pure engine `computeEffectivePrice`/`isMenuItemAvailableNow` with priority/day-of-week/overnight-window semantics; `/effective` endpoint with `?at=` preview)
 
-### Week 8: Inventory Management
-- [ ] **8.1** Create inventory tracking API endpoints
-- [ ] **8.2** Implement stock level monitoring and alerts
-- [ ] **8.3** Add supplier management system
-- [ ] **8.4** Create inventory dashboard for managers
-- [ ] **8.5** Implement purchase order management
-- [ ] **8.6** Add inventory reporting and analytics
+### Week 8: Inventory Management ✅ *completed*
+- [x] **8.1** Create inventory tracking API endpoints (`/inventory/items` CRUD with SKU-unique + tenant-bound supplier validation + delete guard; atomic stock transactions RESTOCK/RETURN/USAGE/ADJUSTMENT via `prisma.$transaction` writing tx + stock delta together, insufficient-stock rejection)
+- [x] **8.2** Implement stock level monitoring and alerts (`GET /inventory/alerts/low-stock` derives LOW vs OUT_OF_STOCK at currentStock ≤ minStock via Prisma field reference; lowStock list filter)
+- [x] **8.3** Add supplier management system (`/suppliers` CRUD tenant-scoped, reference-guarded delete via inventory/PO counts, `/suppliers/:id/items`)
+- [x] **8.4** Create inventory dashboard for managers (`(dashboard)/dashboard/inventory` — Overview/Items/Suppliers/Purchase Orders tabs; alerts, valuation & consumption cards, stock badges, inline restock/usage, PO lifecycle)
+- [x] **8.5** Implement purchase order management (PurchaseOrderStatus enum + PurchaseOrder/PurchaseOrderItem models; DRAFT→SUBMITTED→PARTIALLY_RECEIVED→RECEIVED lifecycle; receive endpoint atomically updates line progress + RESTOCK tx + item stock; over-receipt & foreign-line guards)
+- [x] **8.6** Add inventory reporting and analytics (valuation report `Σ cost×stock`, 30-day consumption report via `groupBy` on USAGE transactions, paginated transaction history)
 
 ### Week 9: Order Processing System
 - [ ] **9.1** Create order creation and management API

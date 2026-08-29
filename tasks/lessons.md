@@ -72,3 +72,21 @@
 
 
 
+
+## L010 — Chunked file-assembly via editor inserts is hazardous around function boundaries
+- **Date:** 2026-08-29
+- **Symptom:** Build fallout while assembling `purchase-orders-panel.tsx` from insert-chunks: the component type resolved to `() => void`, and a stray `};` made `tsc` fail at EOF.
+- **Root cause:** `insert_line` appends raw text at a line number. Inserting a `return (…)` block without first capping the enclosing function (`};`) dropped the JSX into the previous handler, and leftover markers/`;` stayed orphaned at the file tail.
+- **Rule:** When file assembly requires multiple chunked edits, insert CLOSING tokens (function braces, `};`) as part of the same edit that introduces the open — never rely on a later insert. After assembly, run `tsc` FIRST (cheap boundary detector) before reaching for functional debugging; `() => void` component + EOF syntax errors are signature symptoms, not logic bugs.
+
+## L011 — Jest `expect.objectContaining` matches only one level deep — recurse for nested where clauses
+- **Date:** 2026-08-29
+- **Symptom:** `expect(prisma.inventoryItem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId, isActive } }))` failed although the call's where had those keys — because the real where ALSO carried `currentStock`.
+- **Root cause:** `objectContaining` performs partial matching on the TOP-level object only; any nested literal object (like `where`) must match the nested value EXACTLY.
+- **Rule:** Assert nested query-args with `expect.objectContaining({ where: expect.objectContaining({ … }) })` (recursive), or reference the exact nested object when the call builds it deterministically.
+
+## L012 — The shared `createRes` mock never sets `statusCode` for plain `res.json()` 200s
+- **Date:** 2026-08-29
+- **Symptom:** PO submit/receive tests demanded `res.statusCode === 200` and got `undefined` — the handlers respond with `res.json(...)` directly.
+- **Root cause:** In `tests/helpers/mock-express.ts`, `json()` only records `res.body`; `statusCode` is set solely by explicit `res.status(n)` calls (the 201/204 paths).
+- **Rule:** In handler-level specs, assert success responses via `bodyOf(res).data…` (the existing convention), reserve `res.statusCode` assertions for endpoints that call `res.status()` (create → 201, delete → 204).
