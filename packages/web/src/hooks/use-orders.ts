@@ -22,11 +22,14 @@ export function useOrders(query: OrderListQuery = {}) {
   });
 }
 
-export function useOrder(id: string | undefined) {
+export function useOrder(id: string | undefined, refetchInterval?: number) {
   return useQuery({
     queryKey: ['orders', 'detail', id],
     queryFn: () => orderService.getOrder(id!),
     enabled: !!id,
+    // Week 10: the order-confirmation page polls lightly until the WS gateway
+    // (Week 11 replaces this with the SSE/websocket stream).
+    refetchInterval,
   });
 }
 

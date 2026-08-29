@@ -28,7 +28,7 @@ export default function Home() {
             </Link>
           </div>
           <p className="mt-6 text-xs text-content-muted">
-            Staff workspace requires sign-in · Customer ordering launches in Phase 2
+            Customers: sign in to browse the menu and order online · Staff workspace requires sign-in
           </p>
         </div>
       </div>

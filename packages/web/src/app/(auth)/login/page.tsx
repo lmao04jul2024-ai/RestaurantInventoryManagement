@@ -12,6 +12,7 @@ import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { getApiErrorMessage } from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -25,7 +26,6 @@ function LoginForm() {
   const { login } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const sessionExpired = params.get('session') === 'expired';
-  const nextUrl = params.get('next') ?? '/dashboard';
 
   const {
     register,
@@ -37,7 +37,10 @@ function LoginForm() {
     setServerError(null);
     try {
       await login(values);
-      router.replace(nextUrl);
+      // Week 10: customers land in the ordering experience, staff in the dashboard.
+      const role = useAuthStore.getState().user?.role;
+      const fallback = role === 'CUSTOMER' ? '/menu' : '/dashboard';
+      router.replace(params.get('next') ?? fallback);
     } catch (err) {
       setServerError(getApiErrorMessage(err));
     }

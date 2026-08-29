@@ -72,6 +72,17 @@ describe('orderService — Week 9 endpoint contract', () => {
     expect(order.paymentStatus).toBe('PAID');
   });
 
+  it('passes the self-service transactionId through to the pay endpoint (10.4)', async () => {
+    apiPost.mockResolvedValue({ data: { data: { id: 'order-1', paymentStatus: 'PAID' } } });
+
+    await orderService.payOrder('order-1', { method: 'ONLINE', transactionId: 'SIM-ABC123' });
+
+    expect(apiPost).toHaveBeenCalledWith('/orders/order-1/pay', {
+      method: 'ONLINE',
+      transactionId: 'SIM-ABC123',
+    });
+  });
+
   it('fetches the kitchen queue from /orders/kitchen/queue', async () => {
     apiGet.mockResolvedValue({ data: { data: [{ id: 'order-1', status: 'CONFIRMED' }] } });
 

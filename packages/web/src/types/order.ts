@@ -5,7 +5,8 @@
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
-export type PaymentMethod = 'CASH' | 'CARD' | 'MOBILE' | 'ONLINE';
+/** Mirrors PAYMENT_METHODS in packages/api/src/utils/validation.ts (Week 10). */
+export type PaymentMethod = 'CASH' | 'CARD' | 'ONLINE';
 
 export interface OrderItem {
   id: string;
@@ -34,7 +35,8 @@ export interface Payment {
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
-  transactionRef: string | null;
+  /** Prisma Payment.transactionId (was mistakenly typed transactionRef). */
+  transactionId: string | null;
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -98,7 +100,8 @@ export interface OrderStatusPayload {
 export interface PayOrderPayload {
   method: PaymentMethod;
   amount?: number;
-  transactionRef?: string | null;
+  /** API schema key is `transactionId` (payOrderSchema) — Week 10 fix. */
+  transactionId?: string | null;
 }
 
 export interface KitchenSummary {
