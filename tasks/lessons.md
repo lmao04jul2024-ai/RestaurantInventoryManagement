@@ -90,3 +90,8 @@
 - **Symptom:** PO submit/receive tests demanded `res.statusCode === 200` and got `undefined` — the handlers respond with `res.json(...)` directly.
 - **Root cause:** In `tests/helpers/mock-express.ts`, `json()` only records `res.body`; `statusCode` is set solely by explicit `res.status(n)` calls (the 201/204 paths).
 - **Rule:** In handler-level specs, assert success responses via `bodyOf(res).data…` (the existing convention), reserve `res.statusCode` assertions for endpoints that call `res.status()` (create → 201, delete → 204).
+
+## L013 — Joi object schemas reject `undefined` payloads in unit tests
+**Date:** 2026-08-29 (Week 9)
+**Pattern:** Controllers validate `req.query` through Joi object schemas. Express guarantees `req.query` is always an object — but in controller unit tests the request double may omit it, so Joi fails with VALIDATION_ERROR (400) instead of reaching the handler logic. Same class of issue as L011: the mock must mirror Express's real shapes, not just the happy-path fields.
+**Rule:** When a handler calls `validateQuery(schema, req.query)` (or validates params/body), the test request double must include `query: {}` (or the minimal valid object) even when no filters are under test. Any mysterious 400 in controller unit tests → check for missing `query`/`params` keys before suspecting the assertion. Joi also only accepts uuid-shaped ids where `idParamSchema` applies — use the `uid(n)` helper for route params.

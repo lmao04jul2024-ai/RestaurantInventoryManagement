@@ -73,12 +73,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **8.6** Add inventory reporting and analytics (valuation report `Σ cost×stock`, 30-day consumption report via `groupBy` on USAGE transactions, paginated transaction history)
 
 ### Week 9: Order Processing System
-- [ ] **9.1** Create order creation and management API
-- [ ] **9.2** Implement order status workflow (Pending → Preparing → Ready → Completed)
-- [ ] **9.3** Create kitchen display system (KDS) interface
-- [ ] **9.4** Implement order notifications and real-time updates
-- [ ] **9.5** Add order history and reporting
-- [ ] **9.6** Create order management dashboard
+- [x] **9.1** Create order creation and management API
+- [x] **9.2** Implement order status workflow (Pending → Preparing → Ready → Completed)
+- [x] **9.3** Create kitchen display system (KDS) interface
+- [x] **9.4** Implement order notifications and real-time updates
+- [x] **9.5** Add order history and reporting
+- [x] **9.6** Create order management dashboard
 
 ### Week 10: Customer Features - Menu & Ordering
 - [ ] **10.1** Create customer menu browsing interface

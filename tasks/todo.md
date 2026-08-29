@@ -169,3 +169,37 @@ Input spread-order bug (consumer props could clobber internal focus/style).
 install-scripts approval layer (postinstalls skipped incl. api's — existing
 .prisma client intact); concurrent command batching raced install checks.
 Next up: Week 6 DevOps & testing infrastructure.
+
+---
+
+# Session Todo — 2026-08-29 (Week 9 — Order Processing System)
+
+Context: Weeks 1–8 done (48/144), git clean. Schema already has Order/OrderItem/Payment/Table + OrderStatus/PaymentStatus enums (Week 2 foundation) and RBAC matrix covers `order:*` / `order:create` / `order:read` / `order:update:status` / `order:create:own` / `order:read:own`. Shared pricing engine (`computeEffectivePrice`, `isMenuItemAvailableNow`) is available for price snapshotting.
+
+## Week 9 — Order Processing System
+- [x] **9.1** Order creation & management API (`POST /api/orders` snapshotting prices via shared engine; list/detail/update)
+- [x] **9.2** Order status workflow (guarded PENDING→CONFIRMED→PREPARING→READY→COMPLETED + CANCELLED; completedAt; per-line item status)
+- [x] **9.3** Kitchen display system — `/api/orders/kitchen-queue` + per-item READY flips with auto-order-READY + web `/dashboard/kitchen`
+- [x] **9.4** Real-time updates — tenant-scoped order-events emitter + `GET /api/orders/stream` (SSE) + web fetch-stream hook invalidating queries
+- [x] **9.5** Order history & reporting — history filters, customer-own scoping, manager revenue summary
+- [x] **9.6** Order management dashboard — `/dashboard/orders` (filter/advance/pay/cancel) + nav + dashboard placeholders
+
+## Verification
+- [x] API order specs green — 26/26 in order.spec.ts; full suite 111/111 across 8 suites
+- [x] Web order service specs 8/8; tsc clean; eslint clean; next build routes /dashboard/orders + /dashboard/kitchen
+- [x] Full gate: api tsc+eslint+jest (111/111), web tsc+jest+lint+next build (routes generated)
+
+## Wrap-up
+- [x] Tracker ticks (54/144); lesson L013; todo close-out
+- [x] Logical commits (api → web → bookkeeping)
+- [x] Memory MCP termination push per L009: tick → write → verify → commit → indicator
+
+## Review
+- **9.1** `POST /api/orders` snapshots per-line unit prices via the shared pricing engine inside one `$transaction`; availability + tenant-menu guards; CUSTOMER orders force own userId. Update/delete guarded to PENDING.
+- **9.2** `PATCH /orders/:id/status` + `POST /orders/:id/cancel` with ORDER_TRANSITIONS map, FAILED-payment block, completedAt stamping.
+- **9.3** KDS: `GET /orders/kitchen/queue` (CONFIRMED/PREPARING oldest-first), `PATCH /orders/:id/items/:itemId/status` per-line PENDING→PREPARING→READY with auto order-READY when all lines done; web `/dashboard/kitchen` board with 10s polling and 15m age highlighting.
+- **9.4** In-process tenant-scoped pub/sub (`order-events.ts`) + `GET /orders/stream` SSE; web uses polling as the v1 stand-in (EventSource cannot attach Authorization headers — noted for the future WS gateway).
+- **9.5** History listing w/ status+payment filters + customer-own scoping; `GET /orders/report/summary` (countsByStatus, paidRevenue, AOV, windowDays).
+- **9.6** `/dashboard/orders` dashboard: summary cards, status filter, lifecycle actions, card payment collection, cancel; New Order tab building a ticket from available menu items.
+- **Tests:** 26 API order tests + 8 web service tests. Lesson **L013**: Joi object schemas reject undefined payloads — mirror Express's always-object `req.query` in unit tests.
+- **Commit split:** api (controller/routes/events/rbac/validation/tests) → web (types/service/hooks/components/pages/nav/tests) → bookkeeping (tracker/todo/lessons).
