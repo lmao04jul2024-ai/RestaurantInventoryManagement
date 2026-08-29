@@ -80,13 +80,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **9.5** Add order history and reporting
 - [x] **9.6** Create order management dashboard
 
-### Week 10: Customer Features - Menu & Ordering
-- [ ] **10.1** Create customer menu browsing interface
-- [ ] **10.2** Implement shopping cart functionality
-- [ ] **10.3** Add order customization (special requests, modifications)
-- [ ] **10.4** Implement order placement and payment integration
-- [ ] **10.5** Create order confirmation and receipt generation
-- [ ] **10.6** Add order history for customers
+### Week 10: Customer Features - Menu & Ordering ✅ *completed*
+- [x] **10.1** Create customer menu browsing interface (`(shop)` route group + customer shell (ProtectedRoute CUSTOMER, shop header w/ live cart pill) + `/menu` — category chips (top-level; API expands subtree), search, dietary filters, 4 sorts, pagination, item cards with dietary/calorie/prep badges; `available: true` only)
+- [x] **10.2** Implement shopping cart functionality (`store/cart.store.ts` — zustand persist `rms-cart`; lines keyed by item+instructions; merge on repeat adds; qty cap 99; updateQuantity 0-drop; pure `cartItemCount`/`cartSubtotal` selectors)
+- [x] **10.3** Add order customization (item customizer modal — quantity stepper + per-line `specialInstructions` ≤300; order-level `specialRequests` ≤500 at checkout; both flow into the Week-9 create schema)
+- [x] **10.4** Implement order placement and payment integration (`/checkout` line editing + CARD/ONLINE self-service; API `POST /orders/:id/pay` opened to customers via `requireAnyPermission('order:create','order:create:own')` with own-order 403 guard, `CASH_NOT_SELF_SERVICE` 400, amount forced to snapshotted total, `SIM-*` transactionId default; web pay payload key fixed to `transactionId`, PaymentMethod aligned CASH/CARD/ONLINE; pay-failure lands on the order page for retry)
+- [x] **10.5** Create order confirmation and receipt generation (`/orders/[id]` — placed/pay-failed banners, 5-step status timeline w/ 10s polling, receipt card (lines, unit prices, instructions, totals, payment ref, completedAt), `Pay now` for unpaid, print-stylesheet receipt)
+- [x] **10.6** Add order history for customers (`/orders` — status filter chips, deterministic UTC timestamps, badges + totals; API already narrows CUSTOMER listings to own; login redirects CUSTOMER → /menu, staff → /dashboard)
 
 ### Week 11: Customer Features - Tracking & Reviews
 - [ ] **11.1** Create real-time order tracking interface

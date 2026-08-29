@@ -215,19 +215,28 @@ Context: Weeks 1–9 done (54/144), git clean at `8061614`. Fault recovery: L014
 - [x] Fault recovery: L014 + memory delta push (artifact commits after Week 9 termination)
 
 ## Week 10 — Customer Features (Menu & Ordering)
-- [ ] **10.1** Customer menu browsing — `(shop)` route group + customer shell (ProtectedRoute CUSTOMER, shop header w/ cart pill) + `/menu` (categories w/ subtree, search, dietary filters, sort, pagination, item cards)
-- [ ] **10.2** Shopping cart — `store/cart.store.ts` (zustand persist; merge by item+instructions; qty caps; subtotal/count selectors)
-- [ ] **10.3** Order customization — item customizer modal (qty + per-line specialInstructions) + order-level specialRequests at checkout
-- [ ] **10.4** Order placement & payment — `/checkout` (line editing, CARD/ONLINE self-service) + API: open pay route to customers with own-order guard, no CASH self-service, amount forced to total, SIM transactionId
-- [ ] **10.5** Order confirmation & receipt — `/orders/[id]` placed banner, status timeline, printable receipt, pay-now for unpaid
-- [ ] **10.6** Customer order history — `/orders` list (API already scopes CUSTOMER-own) + login redirects CUSTOMER → /menu + type fixes (PaymentMethod −MOBILE, transactionRef→transactionId)
+- [x] **10.1** Customer menu browsing — `(shop)` route group + customer shell (ProtectedRoute CUSTOMER, shop header w/ cart pill) + `/menu` (categories w/ subtree, search, dietary filters, sort, pagination, item cards)
+- [x] **10.2** Shopping cart — `store/cart.store.ts` (zustand persist; merge by item+instructions; qty caps; subtotal/count selectors)
+- [x] **10.3** Order customization — item customizer modal (qty + per-line specialInstructions) + order-level specialRequests at checkout
+- [x] **10.4** Order placement & payment — `/checkout` (line editing, CARD/ONLINE self-service) + API: open pay route to customers with own-order guard, no CASH self-service, amount forced to total, SIM transactionId
+- [x] **10.5** Order confirmation & receipt — `/orders/[id]` placed banner, status timeline, printable receipt, pay-now for unpaid
+- [x] **10.6** Customer order history — `/orders` list (API already scopes CUSTOMER-own) + login redirects CUSTOMER → /menu + type fixes (PaymentMethod −MOBILE, transactionRef→transactionId)
 
 ## Verification
-- [ ] API pay specs green — customer self-pay, foreign-order 403, CASH 400, amount forced; full suite ≥ 115
-- [ ] Web cart store specs green; order.service pay payload passthrough spec
-- [ ] Full gate: api tsc + eslint + jest; web tsc + jest + eslint + next build (routes /menu, /checkout, /orders, /orders/[id])
+- [x] API pay specs green — customer self-pay, foreign-order 403, CASH 400, amount forced; order suite 29/29; api tsc exit 0; eslint src 0 errors; full api 114/114 via root fan-out
+- [x] Web cart store specs 9/9 + pay payload passthrough; web jest 38/38; eslint clean; next build routes /menu, /checkout, /orders, /orders/[id]
+- [x] Full gate: api tsc + eslint + jest; web tsc + jest + eslint + next build (all exit 0)
 
 ## Wrap-up
-- [ ] Tracker ticks (60/144); lessons if any; todo close-out
-- [ ] Logical commits (api → web → bookkeeping)
-- [ ] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
+- [x] Tracker ticks (60/144); lessons if any; todo close-out
+- [x] Logical commits (api → web → bookkeeping)
+- [x] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
+
+## Review
+- **10.1** `(shop)` layout gates CUSTOMER-only via ProtectedRoute (staff bounce to /dashboard per existing behavior); ShopHeader shows nav + live cart count pill + sign-out; `/menu` reuses Week-7 menu hooks (`available: true`), top-level category chips (API subtree-expands filters), dietary toggles, sort select, paginated grid of `CustomerItemCard`s.
+- **10.2/10.3** Cart store persisted (`rms-cart`), identity = menuItemId + trimmed instructions; customizer modal collects qty + per-line instructions (API cap 300); checkout collects order-level specialRequests (cap 500).
+- **10.4** Checkout creates the order (server snapshots effective prices) then immediately self-pays. API: pay route now `requireAnyPermission('order:create','order:create:own')` (KITCHEN still excluded — it holds neither permission); controller customer branch: foreign order → 403 ORDER_FORBIDDEN, CASH → 400 CASH_NOT_SELF_SERVICE, amount forced to snapshotted total, SIM-prefixed transactionId when absent. Web type fixes: PaymentMethod = CASH/CARD/ONLINE, PayOrderPayload.transactionId (was transactionRef), Payment.transactionId. Pay failure mid-checkout still clears the cart and lands on the order page (payFailed banner + Pay now).
+- **10.5** `/orders/[id]`: Suspense-wrapped useSearchParams banners (placed/payFailed), CANCELLED alert, 5-step timeline, receipt card with print stylesheet (print-area isolation), Pay now (CARD) for unpaid, 10s polling until the Week 11 stream.
+- **10.6** `/orders` history with status chips — API narrows CUSTOMER to own orders; deterministic UTC `formatWhen` avoids hydration drift; login fallback route is role-aware (CUSTOMER → /menu).
+- **Tests:** api +3 (self-pay forced-amount, CASH 400, foreign 403) → order suite 29, api total 114; web +10 (9 cart store, 1 pay passthrough) → 38. Grand total 188 (api 114 / web 38 / shared 31 / mobile 5).
+- **Commit split:** api (routes/controller/specs) → web (types/store/hooks/shop components+pages/login/landing/tests) → bookkeeping (tracker/todo).
