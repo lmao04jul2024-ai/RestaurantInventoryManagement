@@ -190,3 +190,142 @@ export const itemWithWindowIdParamSchema = Joi.object({
   windowId: uuid.required(),
 });
 export const windowIdInBodySchema = Joi.object({ windowId: uuid });
+
+// ── Inventory domain schemas (Week 8) ─────────────────────────────────────────
+
+const INVENTORY_UNITS = ['KG', 'G', 'L', 'ML', 'UNIT', 'BOX'] as const;
+const TRANSACTION_TYPES = ['RESTOCK', 'USAGE', 'ADJUSTMENT', 'RETURN'] as const;
+
+export const createInventoryItemSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(200).required(),
+  sku: Joi.string().trim().min(1).max(64).required(),
+  currentStock: Joi.number().min(0).precision(3).default(0),
+  minStock: Joi.number().min(0).precision(3).required(),
+  maxStock: Joi.number().min(0).precision(3).allow(null),
+  unit: Joi.string()
+    .valid(...INVENTORY_UNITS)
+    .default('UNIT'),
+  costPrice: Joi.number().min(0).precision(2).allow(null),
+  sellingPrice: Joi.number().min(0).precision(2).allow(null),
+  supplierId: uuid.allow(null),
+  isActive: Joi.boolean().default(true),
+});
+
+export const updateInventoryItemSchema = createInventoryItemSchema.fork(
+  ['name', 'sku', 'minStock'],
+  (field) => field.optional(),
+);
+
+export const inventoryItemQuerySchema = Joi.object({
+  q: Joi.string().trim().max(200),
+  supplierId: uuid,
+  lowStock: Joi.boolean(),
+  isActive: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  sort: Joi.string().valid('name', 'stock_asc', 'stock_desc', 'newest').default('newest'),
+});
+
+/** USAGE/RESTOCK/RETURN take a positive delta; ADJUSTMENT is a stock-take (absolute level ≥ 0). */
+export const stockTransactionSchema = Joi.object({
+  transactionType: Joi.string()
+    .valid(...TRANSACTION_TYPES)
+    .required(),
+  quantity: Joi.when('transactionType', {
+    is: 'ADJUSTMENT',
+    then: Joi.number().min(0).precision(3).required(),
+    otherwise: Joi.number().greater(0).precision(3).required(),
+  }),
+  unitCost: Joi.number().min(0).precision(2).allow(null),
+  reference: Joi.string().trim().max(120).allow(null),
+  notes: Joi.string().trim().max(500).allow(null),
+});
+
+export const transactionQuerySchema = Joi.object({
+  type: Joi.string().valid(...TRANSACTION_TYPES),
+  from: Joi.date().iso(),
+  to: Joi.date().iso(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
+export const consumptionQuerySchema = Joi.object({
+  from: Joi.date().iso(),
+  to: Joi.date().iso(),
+});
+
+// ── Supplier schemas ──────────────────────────────────────────────────────────
+
+export const createSupplierSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(200).required(),
+  contactName: Joi.string().trim().max(120).allow(null),
+  email: Joi.string().email().max(255).allow(null),
+  phone: Joi.string().trim().max(20).allow(null),
+  address: Joi.string().trim().max(500).allow(null),
+  isActive: Joi.boolean().default(true),
+});
+
+export const updateSupplierSchema = createSupplierSchema.fork(
+  ['name'],
+  (field) => field.optional(),
+);
+
+export const supplierQuerySchema = Joi.object({
+  q: Joi.string().trim().max(200),
+  isActive: Joi.boolean(),
+});
+
+// ── Purchase-order schemas ────────────────────────────────────────────────────
+
+const PO_STATUSES = ['DRAFT', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'] as const;
+
+const poLineSchema = Joi.object({
+  inventoryItemId: uuid.required(),
+  quantityOrdered: Joi.number().greater(0).precision(3).required(),
+  unitCost: Joi.number().min(0).precision(2).allow(null),
+});
+
+export const createPurchaseOrderSchema = Joi.object({
+  supplierId: uuid.required(),
+  orderNumber: Joi.string().trim().min(1).max(40),
+  expectedAt: Joi.date().iso().allow(null),
+  notes: Joi.string().trim().max(500).allow(null),
+  items: Joi.array().items(poLineSchema).min(1).max(100).required(),
+});
+
+export const updatePurchaseOrderSchema = Joi.object({
+  supplierId: uuid,
+  expectedAt: Joi.date().iso().allow(null),
+  notes: Joi.string().trim().max(500).allow(null),
+  items: Joi.array().items(poLineSchema).min(1).max(100),
+}).min(1);
+
+export const purchaseOrderQuerySchema = Joi.object({
+  status: Joi.string().valid(...PO_STATUSES),
+  supplierId: uuid,
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
+export const receivePurchaseOrderSchema = Joi.object({
+  items: Joi.array()
+    .items(
+      Joi.object({
+        itemId: uuid.required(), // PurchaseOrderItem id
+        quantity: Joi.number().greater(0).precision(3).required(),
+        unitCost: Joi.number().min(0).precision(2).allow(null),
+      }),
+    )
+    .min(1)
+    .max(100)
+    .required(),
+});
+
+// ── Inventory domain param schemas ────────────────────────────────────────────
+
+export const itemWithPoItemIdParamSchema = Joi.object({
+  id: uuid.required(),
+  itemId: uuid.required(),
+});
+
+export const poIdParamSchema = Joi.object({ id: uuid.required() });

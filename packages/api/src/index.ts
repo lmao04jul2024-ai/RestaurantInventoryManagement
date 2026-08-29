@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth.routes';
 import menuRoutes from './routes/menu.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import supplierRoutes from './routes/supplier.routes';
+import purchaseOrderRoutes from './routes/purchase-order.routes';
 
 dotenv.config();
 
@@ -49,10 +52,12 @@ app.get('/', (_req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/menus', menuRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
-// TODO: mount additional routes in coming weeks:
+// TODO: mount remaining routes in coming weeks:
 // app.use('/api/orders', orderRoutes);
-// app.use('/api/inventory', inventoryRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);
