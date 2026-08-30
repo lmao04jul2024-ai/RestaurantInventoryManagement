@@ -89,12 +89,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **10.6** Add order history for customers (`/orders` — status filter chips, deterministic UTC timestamps, badges + totals; API already narrows CUSTOMER listings to own; login redirects CUSTOMER → /menu, staff → /dashboard)
 
 ### Week 11: Customer Features - Tracking & Reviews
-- [ ] **11.1** Create real-time order tracking interface
-- [ ] **11.2** Implement order status notifications
+- [x] **11.1** Create real-time order tracking interface (`/orders/[id]` — dynamic 5s polling while PENDING→READY via refetchInterval fn, fully idle once COMPLETED/CANCELLED; pulsing Live pill; per-line kitchen status chip from item.status)
+- [x] **11.2** Implement order status notifications (`components/shop/order-notifications.tsx` in shop shell — 15s poll of own orders, pure `activeOrders`/`diffOrderStatuses` diff vs persisted `rms-order-notified` map, aria-live toast stack w/ auto-dismiss; gated by `rms-prefs` toggle)
 - [x] **11.3** Add customer review and rating system
-- [ ] **11.4** Create review management for admin
+- [x] **11.4** Create review management for admin (`/dashboard/reviews` ADMIN/MANAGER — infinite list, show/hide via PATCH visibility, delete (MANAGER+ w/ confirm), star display, hidden-state styling; sidebar entry)
 - [x] **11.5** Implement customer feedback collection
-- [ ] **11.6** Add customer profile and preferences
+- [x] **11.6** Add customer profile and preferences (API GET/PATCH `/users/me` + GET `/users/:id` tenant-scoped; web `user.service`/`use-user` hook mirroring into auth store; `/account` page with profile form + notifications preference toggle persisted in `rms-prefs`; AuthUser.phone added; Account link in shop header)
 
 ### Week 12: QR Code System & QappR Integration
 - [ ] **12.1** Create QR code generation for tables

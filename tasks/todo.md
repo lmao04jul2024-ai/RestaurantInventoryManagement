@@ -211,22 +211,30 @@ Context: Weeks 1–8 done (48/144), git clean. Schema already has Order/OrderIte
 Context: Weeks 1–10 done (60/144), git clean at `a01f107`. Review model exists (rating 1–5, comment, orderId @unique, isVisible) + `review:create:own` on CUSTOMER; order detail already polls (10s). No schema changes required this week (User has firstName/lastName/phone).
 
 ## Week 11 — Tracking & Reviews
-- [ ] **11.1** Real-time order tracking — `/orders/[id]` tracking upgrade: 5s polling while active (idle when closed), Live indicator, per-item KDS status on receipt lines
-- [ ] **11.2** Order status notifications — `OrderNotifications` provider in shop layout: 15s poll of active orders, status-diff vs persisted `rms-order-notified` map, toast stack; gated by account preference
+- [x] **11.1** Real-time order tracking — `/orders/[id]` tracking upgrade: 5s polling while active (idle when closed), Live indicator, per-item KDS status on receipt lines
+- [x] **11.2** Order status notifications — `OrderNotifications` provider in shop layout: 15s poll of active orders, status-diff vs persisted `rms-order-notified` map, toast stack; gated by account preference
 - [x] **11.3** Customer review & rating system — API `/api/reviews` (create for own COMPLETED order w/ unique guard 409 REVIEW_EXISTS, mine list, staff list, moderate visibility, delete; RBAC + `review:read:own` grant) + web star-rating form/display on the order page
-- [ ] **11.4** Review management for admin — `/dashboard/reviews` (MANAGER/ADMIN): avg-rating summary, rating/visibility filters, show-hide + delete; sidebar + dashboard home card
+- [x] **11.4** Review management for admin — `/dashboard/reviews` (ADMIN/MANAGER): infinite list w/ hidden-state styling, show-hide + delete (w/ confirm), star display; sidebar entry (avg-rating summary + filters deferred — not in API contract)
 - [x] **11.5** Customer feedback collection — post-completion "Rate your experience" prompt on order page (review = feedback mechanism per data model)
-- [ ] **11.6** Customer profile & preferences — API `GET/PATCH /users/me` (names/phone, Joi-validated, sanitized) + `/account` page: profile form (auth store updated in place) + preferences card (status notifications toggle via persisted prefs store)
+- [x] **11.6** Customer profile & preferences — API `GET/PATCH /users/me` (+ tenant-scoped `GET /users/:id`) + `/account` page: profile form (auth store updated in place) + preferences card (status notifications toggle via persisted `rms-prefs` store) + Account link in shop header
 
 ## Verification
-- [x] API review specs (11) + user controller green; tsc + eslint src clean (11.3/11.4/11.5 complete)
-- [ ] Web review/service specs (5) green; tsc clean (pre-existing cart.store.spec errors unrelated); next build (routes /account, /account/reviews, /dashboard/reviews — deferred to 11.4/11.6)
-- [ ] Full fan-out: api 125/125 + web 43/43 (shared + mobile) all green
+- [x] API: `user.spec.ts` 10/10 (sanitized profile, 401/404, Joi trim/min/max, empty-body 400, phone>20 400, tenant-scoped lookup); full api suite 135/135; tsc exit 0; eslint src 0 errors
+- [x] Web: `notifications.spec.ts` 5/5 (active filter, first-seen toast, no-change silence, per-advance toasts, finished-between-polls) + `user.service.spec.ts` 3/3 + cart fixture fix; jest 51/51; tsc exit 0; eslint clean; next build 17/17 routes incl. /account + /dashboard/reviews
+- [x] Grand totals: api 135 / web 51 / shared 31 / mobile 5 = **222 tests green**
 
 ## Wrap-up
-- [ ] Tracker ticks (66/144); lessons if any; todo close-out
-- [ ] Logical commits (api → web → bookkeeping)
+- [x] Tracker ticks (66/144); lesson L015; todo close-out
+- [x] Logical commits (api → web → bookkeeping)
 - [ ] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
+
+## Review
+- **11.1** `useOrder` now accepts a refetchInterval *function* `(order) => number | false`; OrderDetail passes `!o || isOrderActive(o.status) ? 5_000 : false` — live while PENDING→READY, zero polling once settled. Live pill (pulsing dot) beside the status badges; each receipt line shows `item.status.toLowerCase()` chip while active (KDS statuses surface without staff jargon).
+- **11.2** `order-notifications.tsx` mounted in the `(shop)` shell. Pure diff helpers (`activeOrders`, `diffOrderStatuses`) are exported + unit-tested; seen-map persists to `rms-order-notified` so refreshes don't replay toasts; toast stack caps at 3, auto-dismiss 6s, aria-live polite. Master gate = `rms-prefs.statusNotifications` (11.6 toggle).
+- **11.4** `reviews-page.tsx` (dashboard) renders `useAllReviews` infinite list as cards (stars, customer, order number, comment, Visible/Hidden pill, hidden rows amber-tinted); Hide/Show → PATCH `/reviews/:id/visibility`, Delete → DELETE (MANAGER+, confirm-guarded); sidebar entry ADMIN/MANAGER (matches `review:moderate`/MANAGER+ delete). Skipped the planned avg-rating summary/filters — the API list endpoint exposes none of it; honest scope beats a fake summary.
+- **11.6** API `/users/me` GET+PATCH existed from the earlier pass; added web `user.service` + `use-user` hook (PATCH mirrors `firstName/lastName/phone` into the auth store in place, so the header greeting updates immediately). `/account` has a dirty-guarded form (names, phone optional/null-clearing, email read-only) + the notifications preference card. `AuthUser.phone?: string | null` added to the type.
+- **Tests:** api +10 (user.spec) → 135; web +8 (5 notifications, 3 user.service) → 51; cart.store.spec fixtures updated for the `specialInstructions` field (pre-existing tsc failures fixed). Grand total 222 (api 135 / web 51 / shared 31 / mobile 5).
+- **Commit split:** api (user.spec) → web (account/notifications/reviews pages, stores/hooks/services, order-detail upgrades, tests) → bookkeeping (trackers, lesson, .gitignore for tsbuildinfo).
 
 ---
 
