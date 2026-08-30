@@ -226,7 +226,7 @@ Context: Weeks 1–10 done (60/144), git clean at `a01f107`. Review model exists
 ## Wrap-up
 - [x] Tracker ticks (66/144); lesson L015; todo close-out
 - [x] Logical commits (api → web → bookkeeping)
-- [ ] Memory MCP termination push per L009/L014: tick → write → verify (`open_nodes`) → commit → indicator
+- [ ] Memory MCP termination push per L009/L014 — **BLOCKED 2026-08-29**: the Memory MCP server is not attached to the current session (no memory tools in the function set; no graph store found on disk). Pending delta to push when re-attached: Week 11 complete (66/144) at `a656865` — 11.1 dynamic-poll live tracking + Live pill + per-item KDS chips; 11.2 OrderNotifications (15s poll, `rms-order-notified` seen-map, toast stack, `rms-prefs` gate); 11.4 `/dashboard/reviews` moderation (ADMIN/MANAGER, sidebar); 11.6 `/users/me` API + `/account` profile/prefs + `AuthUser.phone`; lesson L015 (brace-nesting on insert_line; assert body not status for bare res.json handlers); tests 222 green (api 135 / web 51 / shared 31 / mobile 5). Next: Week 12 — QR Code System & QappR Integration.
 
 ## Review
 - **11.1** `useOrder` now accepts a refetchInterval *function* `(order) => number | false`; OrderDetail passes `!o || isOrderActive(o.status) ? 5_000 : false` — live while PENDING→READY, zero polling once settled. Live pill (pulsing dot) beside the status badges; each receipt line shows `item.status.toLowerCase()` chip while active (KDS statuses surface without staff jargon).
