@@ -7,7 +7,7 @@ import Button from '@/components/ui/button';
 import { StatusBadge, PaymentBadge } from '@/components/orders/order-badges';
 import { formatPrice } from '@/lib/menu-ui';
 import { getApiErrorMessage } from '@/lib/api';
-import { useOrder, usePayOrder } from '@/hooks/use-orders';
+import { useOrder, usePayOrder, isOrderActive } from '@/hooks/use-orders';
 import type { OrderStatus } from '@/types/order';
 import ReviewForm from '@/components/shop/review-form';
 
@@ -18,15 +18,18 @@ function formatWhen(iso: string | null): string {
 }
 
 /**
- * Week 10 (10.5) — order confirmation, live status timeline (10s polling until
- * the Week 11 stream), printable receipt and self-service Pay now.
+ * Week 10 (10.5) + Week 11.1 — order confirmation & real-time tracking.
+ * Polls every 5s while the ticket is active (PENDING→READY), goes fully idle
+ * once COMPLETED/CANCELLED. Shows a Live pill and per-line kitchen status.
  */
 export default function OrderDetail({ id }: { id: string }) {
   const params = useSearchParams();
   const justPlaced = params.get('placed') === '1';
   const payFailed = params.get('payFailed') === '1';
 
-  const { data: order, isLoading } = useOrder(id, 10_000);
+  const { data: order, isLoading } = useOrder(id, (o) =>
+    !o || isOrderActive(o.status) ? 5_000 : false,
+  );
   const pay = usePayOrder();
 
   if (isLoading || !order) {
@@ -114,6 +117,15 @@ export default function OrderDetail({ id }: { id: string }) {
           <div className="flex gap-2">
             <StatusBadge status={order.status} />
             <PaymentBadge status={order.paymentStatus} />
+            {isOrderActive(order.status) && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium text-green-700"
+                aria-label="Tracking live"
+              >
+                <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                Live
+              </span>
+            )}
           </div>
         </div>
 
@@ -131,6 +143,12 @@ export default function OrderDetail({ id }: { id: string }) {
               <p className="text-xs text-content-muted">
                 {formatPrice(item.unitPrice)} each
                 {item.specialInstructions ? ` · ${item.specialInstructions}` : ''}
+                {/* Week 11.1 — per-line kitchen progress on active tickets */}
+                {isOrderActive(order.status) && (
+                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-muted">
+                    {item.status.toLowerCase()}
+                  </span>
+                )}
               </p>
             </li>
           ))}

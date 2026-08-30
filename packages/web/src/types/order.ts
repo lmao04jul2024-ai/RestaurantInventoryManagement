@@ -79,6 +79,16 @@ export interface ReviewLite {
   comment: string | null;
   isVisible: boolean;
   createdAt: string;
+  /** Staff list includes order + customer relations. */
+  order?: { id: string; orderNumber: string };
+  customer?: { id: string; firstName: string; lastName: string };
+}
+
+/** Full review with relations (staff dashboard, Week 11.4). */
+export interface Review extends ReviewLite {
+  order: { id: string; orderNumber: string };
+  customer: { id: string; firstName: string; lastName: string };
+  updatedAt: string;
 }
 
 export interface OrderListQuery {

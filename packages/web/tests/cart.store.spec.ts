@@ -6,8 +6,8 @@ import {
   type CartLine,
 } from '@/store/cart.store';
 
-const pizza = { menuItemId: 'item-1', name: 'Margherita', price: 10, image: null };
-const salad = { menuItemId: 'item-2', name: 'Garden Salad', price: 6.5, image: null };
+const pizza = { menuItemId: 'item-1', name: 'Margherita', price: 10, image: null, specialInstructions: null };
+const salad = { menuItemId: 'item-2', name: 'Garden Salad', price: 6.5, image: null, specialInstructions: null };
 
 const lines = (): CartLine[] => useCartStore.getState().lines;
 

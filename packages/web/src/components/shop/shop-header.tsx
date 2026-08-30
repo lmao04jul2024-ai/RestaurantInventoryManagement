@@ -8,6 +8,7 @@ import { useCartStore, cartItemCount } from '@/store/cart.store';
 const NAV = [
   { href: '/menu', label: 'Menu' },
   { href: '/orders', label: 'My Orders' },
+  { href: '/account', label: 'Account' },
 ];
 
 /** Customer-facing top bar: nav, live cart pill, account (Week 10). */

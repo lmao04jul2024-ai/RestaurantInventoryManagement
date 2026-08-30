@@ -15,6 +15,8 @@ export interface AuthUser {
   role: UserRole;
   tenantId: string;
   emailVerified: boolean;
+  /** Week 11.6 — exposed by GET /users/me and editable via PATCH /users/me. */
+  phone?: string | null;
 }
 
 export interface AuthTokens {

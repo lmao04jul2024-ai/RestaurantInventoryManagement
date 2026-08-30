@@ -2,7 +2,6 @@
 
 import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { reviewService } from '@/services/review.service';
-import type { ReviewLite } from '@/types/order';
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +39,29 @@ export function useCreateReview() {
   return useMutation({
     mutationFn: (payload: { orderId: string; rating: number; comment?: string | null }) =>
       reviewService.createReview(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REVIEW_KEYS });
+    },
+  });
+}
+
+/** Staff: toggle review visibility (11.4). */
+export function useSetReviewVisibility() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isVisible }: { id: string; isVisible: boolean }) =>
+      reviewService.setVisibility(id, isVisible),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REVIEW_KEYS });
+    },
+  });
+}
+
+/** Staff: delete a review (11.4). */
+export function useDeleteReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reviewService.deleteReview(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: REVIEW_KEYS });
     },

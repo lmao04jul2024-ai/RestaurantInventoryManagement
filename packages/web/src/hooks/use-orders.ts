@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tansta
 import { orderService } from '@/services/order.service';
 import type {
   CreateOrderPayload,
+  Order,
   OrderListQuery,
   OrderStatus,
   OrderStatusPayload,
@@ -22,15 +23,33 @@ export function useOrders(query: OrderListQuery = {}) {
   });
 }
 
-export function useOrder(id: string | undefined, refetchInterval?: number) {
+export function useOrder(
+  id: string | undefined,
+  refetchInterval?: number | false | ((order: Order | undefined) => number | false),
+) {
   return useQuery({
     queryKey: ['orders', 'detail', id],
     queryFn: () => orderService.getOrder(id!),
     enabled: !!id,
-    // Week 10: the order-confirmation page polls lightly until the WS gateway
-    // (Week 11 replaces this with the SSE/websocket stream).
-    refetchInterval,
+    refetchInterval:
+      typeof refetchInterval === 'function'
+        ? (query) => refetchInterval(query.state.data as Order | undefined)
+        : refetchInterval === false
+          ? false
+          : refetchInterval,
   });
+}
+
+/** Week 11.1 — statuses the kitchen is still working through. */
+export const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
+  'PENDING',
+  'CONFIRMED',
+  'PREPARING',
+  'READY',
+];
+
+export function isOrderActive(status: OrderStatus): boolean {
+  return ACTIVE_ORDER_STATUSES.includes(status);
 }
 
 /**
