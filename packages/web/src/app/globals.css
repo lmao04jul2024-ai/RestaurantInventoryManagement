@@ -39,6 +39,18 @@
   --color-content-default: 17 24 39;
   --color-content-muted: 107 114 128;
 
+  /* Gray ladder — variable-mapped so dark mode flips borders/hovers too */
+  --color-gray-50: 249 250 251;
+  --color-gray-100: 243 244 246;
+  --color-gray-200: 229 231 235;
+  --color-gray-300: 209 213 219;
+  --color-gray-400: 156 163 175;
+  --color-gray-500: 107 114 128;
+  --color-gray-600: 75 85 99;
+  --color-gray-700: 55 65 81;
+  --color-gray-800: 31 41 55;
+  --color-gray-900: 17 24 39;
+
   /* Typography & shape */
   --font-family-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --radius: 0.5rem;
@@ -46,13 +58,28 @@
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: 17 24 39;
-    --color-surface-muted: 31 41 55;
-    --color-content-default: 249 250 251;
-    --color-content-muted: 156 163 175;
-  }
+/*
+ * Dark surfaces, stamped pre-paint by the theme boot script and kept in sync
+ * by ThemeProvider (which also mirrors these values as inline styles).
+ * NOTE: brand palettes stay light-optimized in dark mode (standard practice);
+ * only surfaces/grays invert.
+ */
+[data-theme='dark'] {
+  --color-surface: 17 24 39;
+  --color-surface-muted: 31 41 55;
+  --color-content-default: 249 250 251;
+  --color-content-muted: 156 163 175;
+
+  --color-gray-50: 31 41 55;
+  --color-gray-100: 31 41 55;
+  --color-gray-200: 55 65 81;
+  --color-gray-300: 75 85 99;
+  --color-gray-400: 107 114 128;
+  --color-gray-500: 156 163 175;
+  --color-gray-600: 156 163 175;
+  --color-gray-700: 209 213 219;
+  --color-gray-800: 229 231 235;
+  --color-gray-900: 243 244 246;
 }
 
 body {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTheme } from '@/components/theme/theme-provider';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore, cartItemCount } from '@/store/cart.store';
 
@@ -19,6 +20,7 @@ export default function ShopHeader() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const lines = useCartStore((s) => s.lines);
   const count = cartItemCount(lines);
+  const { isDark, toggleDark } = useTheme();
 
   const signOut = () => {
     clearAuth();
@@ -63,6 +65,14 @@ export default function ShopHeader() {
             </span>
           )}
         </Link>
+        <button
+          type="button"
+          onClick={toggleDark}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="rounded p-1.5 text-base transition-colors hover:bg-gray-100"
+        >
+          {isDark ? '☀️' : '🌙'}
+        </button>
         <span className="hidden text-sm text-content-muted md:block">
           {user ? `Hi, ${user.firstName}` : null}
         </span>

@@ -6,6 +6,7 @@ import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
 import Input from '@/components/ui/input';
+import ThemeSwitcher from '@/components/theme/theme-switcher';
 import { useMyProfile, useUpdateProfile } from '@/hooks/use-user';
 import { useAuthStore } from '@/store/auth.store';
 import { usePrefsStore } from '@/store/prefs.store';
@@ -148,6 +149,17 @@ export default function AccountPage() {
             </span>
           </span>
         </label>
+      </Card>
+
+      {/* Appearance (Week 13) */}
+      <Card>
+        <h2 className="text-lg font-semibold text-content-default">Appearance</h2>
+        <p className="mt-1 text-sm text-content-muted">
+          Brand colors and mode — saved to this device instantly.
+        </p>
+        <div className="mt-4">
+          <ThemeSwitcher />
+        </div>
       </Card>
 
       <p className="text-sm">

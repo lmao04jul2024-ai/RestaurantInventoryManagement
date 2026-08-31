@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { THEME_BOOT_SCRIPT } from '@/lib/theme'
 import Providers from './providers'
 import './globals.css'
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the boot script stamps data-theme pre-hydration.
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} font-sans bg-surface text-content-default antialiased`}>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <Providers>{children}</Providers>
       </body>
     </html>
