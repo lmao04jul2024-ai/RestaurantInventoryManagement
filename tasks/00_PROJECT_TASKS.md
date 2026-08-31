@@ -107,12 +107,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 ## 🎨 Phase 3: Customization & Multi-Tenancy (Weeks 13-18)
 
 ### Week 13: Theme Engine Foundation
-- [ ] **13.1** Create design token system (colors, typography, spacing)
-- [ ] **13.2** Implement theme provider and context
-- [ ] **13.3** Add CSS variable generation for dynamic theming
-- [ ] **13.4** Create theme switching mechanism
-- [ ] **13.5** Implement base theme templates (Light, Dark, Custom)
-- [ ] **13.6** Add theme persistence and user preferences
+- [x] **13.1** Create design token system (colors, typography, spacing) (`lib/theme.ts` — single source of truth: brand palettes as raw RGB triplets so Tailwind opacity utils keep working; 3 presets + custom; light/dark surface + gray token sets)
+- [x] **13.2** Implement theme provider and context (`components/theme/theme-provider.tsx` — `useTheme()` w/ prefs, setPreset/setMode/setCustom, matchMedia-tracked system preference, applies vars to `document.documentElement`)
+- [x] **13.3** Add CSS variable generation for dynamic theming (`buildCssVariables()` emits every `--color-*` var; `globals.css` defaults match classic/light; `tailwind.config.js` maps primary/secondary/gray/surface/content to `var(--color-…)` with `<alpha-value>`)
+- [x] **13.4** Create theme switching mechanism (`theme-switcher.tsx` preset radio group + mode segment + custom color pickers; header quick dark toggle; mounted in shop header + account Appearance card)
+- [x] **13.5** Implement base theme templates (Light, Dark, Custom) (LIGHT/DARK surface+gray sets; custom preset generates a 50–900 shade ladder from one brand hex — 600 anchor is the exact brand color, ladder monotonic by luminance)
+- [x] **13.6** Add theme persistence and user preferences (`rms-theme` localStorage via validated save/load; `THEME_BOOT_SCRIPT` inline in root layout stamps `data-theme` pre-paint — no FOUC; Appearance section on /account)
 
 ### Week 14: Feature Flags System
 - [ ] **14.1** Create feature flag database schema

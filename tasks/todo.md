@@ -1,3 +1,32 @@
+# Session Todo — 2026-08-30 (Week 13 — Theme Engine Foundation)
+
+Context: Weeks 1–11 done (66/144), git clean at `3ec5121`. **Week 12 (QR/QappR) SKIPPED per user** — revisit after Phase 3. No schema changes needed. ⚠️ Memory MCP still unattached in this session — pending delta recorded here (same blocker as Week 11, see `3ec5121`).
+
+## Week 13 — Theme Engine Foundation (Phase 3 W1)
+- [x] **13.1** Design token system — `lib/theme.ts`: palettes as RGB-triplet strings (`"37 99 235"`) so Tailwind `<alpha-value>` opacity utilities keep working; 3 brand presets (classic/emerald/sunset) + custom; light+dark surface/gray token sets; single source of truth for every `--color-*` var
+- [x] **13.2** Theme provider & context — `theme-provider.tsx` (`useTheme()` → prefs, setPreset/setMode/setCustom; listens to `prefers-color-scheme` changes in system mode; writes vars + `data-theme` to `<html>`); wired into root `providers.tsx`
+- [x] **13.3** CSS variable generation — pure `buildCssVariables(prefs, systemPrefersDark)`; `globals.css` holds classic/light defaults as fallback; `tailwind.config.js` remaps primary/secondary/gray/surface/content tokens to `var(--color-…)`
+- [x] **13.4** Switching mechanism — `theme-switcher.tsx` (preset radio group w/ swatches, Light/Dark/System segment, custom brand color pickers); quick dark toggle in shop header; full control on /account
+- [x] **13.5** Base templates — Light + Dark are first-class (surfaces/grays swap via `data-theme` CSS block + inline vars); Custom generates a 50–900 shade ladder from one brand hex (600 anchor = exact hex, monotonic luminance, sat clamped 35–90)
+- [x] **13.6** Persistence & preferences — validated `rms-theme` localStorage (garbage → defaults); `THEME_BOOT_SCRIPT` inline in root layout stamps `data-theme` before first paint (no white flash); Appearance section on /account
+
+## Verification
+- [x] Web: tsc exit 0; jest **65/65** (+14 theme: 10 lib, 4 provider/switcher incl. palette-anchor, luminance monotonicity, dark flip, persistence roundtrip, boot script); eslint src+tests clean; next build 17/17
+- [x] Fixed en route: `buildPalette` dropped the HSL hue (`h is not defined` — L015 pattern: verify inserts structurally); provider spec rewritten off the uninstalled `user-event` → `fireEvent`; `getByLabelText` already returns the input (dropped pointless querySelector)
+
+## Wrap-up
+- [x] Tracker ticks (72/144); todo close-out
+- [x] Logical commits (web feature → bookkeeping)
+- [ ] Memory MCP termination push — **BLOCKED, MCP not attached** (delta = this section; first action next session)
+
+## Review
+- **Design choice:** RGB triplets + `var()` mapping keep the entire existing class set (`bg-primary-600`, `text-content-muted`, `border-gray-200`…) theme-aware without touching a single component. `data-theme` handles surface flips in CSS pre-hydration; brand palettes hydrate in (classic === CSS defaults → zero visual jump).
+- **FOUC prevention:** boot script resolves stored mode × OS preference and stamps `data-theme` before paint. Custom presets intentionally don't boot-script (palette CSS is generated at hydration; classic defaults cover SSR).
+- **Tests:** `theme.spec.ts` (10) covers variable assembly for light/dark/custom, `resolveIsDark` matrix, ladder monotonicity via `luminance()`, hex parsing incl. shorthand + garbage rejection, persistence validation, boot-script shape. `theme-provider.spec.tsx` (4) drives the real switcher: mount applies defaults, preset switch regenerates all vars + persists, custom picker regenerates palette, dark mode flips surfaces.
+- **Next:** Week 14 — Feature Flags System.
+
+---
+
 # Session Todo — 2026-08-27 (Week 7)
 
 Context restored from Memory MCP. Roadmap position: Weeks 1–6 done — **Phase 1 COMPLETE (36/144)**, git clean at `40daa9f`. This session starts Phase 2.
