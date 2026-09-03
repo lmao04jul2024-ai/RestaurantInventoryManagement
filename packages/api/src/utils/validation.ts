@@ -414,3 +414,34 @@ export const updateProfileSchema = Joi.object({
   lastName: Joi.string().trim().min(1).max(100),
   phone: Joi.string().trim().max(20).allow(null),
 }).min(1);
+
+// ── Feature flag domain schemas (Week 14) ─────────────────────────────────────
+
+const flagName = Joi.string()
+  .trim()
+  .min(2)
+  .max(64)
+  .pattern(/^[a-z0-9_]+$/)
+  .message('Flag name must be 2-64 characters using only lowercase letters, digits, and underscores');
+
+export const createFeatureFlagSchema = Joi.object({
+  name: flagName.required(),
+  description: Joi.string().trim().max(500).allow(null),
+  isEnabled: Joi.boolean().default(false),
+});
+
+export const updateFeatureFlagSchema = Joi.object({
+  name: flagName,
+  description: Joi.string().trim().max(500).allow(null),
+  isEnabled: Joi.boolean(),
+}).min(1);
+
+export const featureFlagIdParamSchema = Joi.object({ id: uuid.required() });
+
+/** Per-tenant overrides: `{ flagName: boolean | null }` — null clears an override. */
+export const updateFeatureConfigSchema = Joi.object({
+  overrides: Joi.object()
+    .pattern(flagName, Joi.boolean().allow(null))
+    .max(200)
+    .required(),
+});

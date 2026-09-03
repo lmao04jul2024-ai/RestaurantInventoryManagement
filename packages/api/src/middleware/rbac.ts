@@ -130,6 +130,8 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'review:moderate',
     'analytics:read',
     'staff:read',
+    'feature-flag:read',
+    'feature-flag:manage',
   ],
   [UserRole.ADMIN]: ['*'], // Full access
 };

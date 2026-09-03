@@ -20,11 +20,13 @@ async function main() {
         fontFamily: 'Inter'
       },
       features: {
-        customerOrdering: true,
-        qrIntegration: true,
-        qappRConnect: false,
-        loyaltyProgram: true,
-        advancedAnalytics: false
+        customer_ordering: true,
+        qr_integration: true,
+        table_management: true,
+        qappR_connect: false,
+        loyalty_program: true,
+        advanced_analytics: false,
+        customer_reviews: true
       }
     }
   });
@@ -310,7 +312,9 @@ async function main() {
     data: [
       { name: 'customer_ordering', description: 'Enable customer self-ordering', isEnabled: true },
       { name: 'qr_integration', description: 'Enable QR code ordering', isEnabled: true },
+      { name: 'table_management', description: 'Enable table management', isEnabled: true },
       { name: 'loyalty_program', description: 'Enable customer loyalty points', isEnabled: true },
+      { name: 'customer_reviews', description: 'Enable customers to rate and review completed orders', isEnabled: true },
       { name: 'advanced_analytics', description: 'Enable advanced analytics dashboard', isEnabled: false }
     ]
   });

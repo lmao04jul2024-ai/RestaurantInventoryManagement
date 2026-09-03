@@ -1,9 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import prisma from '../services/database';
+import { normalizeOverrides } from '../services/feature-flags';
 
 export interface TenantRequest extends AuthRequest {
   tenantId?: string;
+  /** Week 14 — normalized `Tenant.features` boolean map ({ flagName: boolean }). */
+  tenantFeatures?: Record<string, boolean>;
 }
 
 /**
@@ -80,6 +83,7 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
     }
 
     req.tenantId = tenant.id;
+    req.tenantFeatures = normalizeOverrides(tenant.features);
     next();
   } catch (error) {
     next(error);
