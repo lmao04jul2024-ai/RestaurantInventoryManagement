@@ -8,6 +8,8 @@ export interface TenantRequest extends AuthRequest {
   tenantId?: string;
   /** Week 14 — normalized `Tenant.features` boolean map ({ flagName: boolean }). */
   tenantFeatures?: Record<string, boolean>;
+  /** Week 16.5 — the authenticated user's per-user permission overrides. */
+  permissionOverrides?: Record<string, boolean>;
 }
 
 /**
@@ -85,6 +87,16 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
 
     req.tenantId = tenant.id;
     req.tenantFeatures = normalizeOverrides(tenant.features);
+    // Week 16.5 — per-user permission overrides ride along for requirePermission.
+    // Fresh from the DB on every request (never baked into the JWT, so revocation
+    // takes effect immediately without waiting for a token refresh).
+    const overrideRow = req.user
+      ? await prisma.user.findUnique({
+          where: { id: req.user.userId },
+          select: { permissionOverrides: true },
+        })
+      : null;
+    req.permissionOverrides = normalizeOverrides(overrideRow?.permissionOverrides ?? null);
     // Week 15 — downstream handlers + every Prisma call inherit the tenant via
     // AsyncLocalStorage, so the data-access-layer guard can auto-scope.
     runWithTenant(tenant.id, () => next());

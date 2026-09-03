@@ -485,3 +485,52 @@ export const updateTenantSchema = Joi.object({
 export const tenantAnalyticsQuerySchema = Joi.object({
   days: Joi.number().integer().min(1).max(365).default(30),
 });
+
+// ── Staff management & audit schemas (Week 16) ───────────────────────────────
+
+/** Week 16.5 — per-user permission overrides; null clears all overrides. */
+export const permissionOverridesSchema = Joi.object()
+  .pattern(
+    Joi.string().trim().min(1),
+    Joi.alternatives(Joi.boolean(), Joi.valid(null)),
+  )
+  .max(50);
+
+/** Week 16.5 — staff creation payload (ADMIN/MANAGER; customer self-registration is separate). */
+export const createStaffSchema = Joi.object({
+  email: Joi.string().email().max(255).required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .required(),
+  firstName: Joi.string().trim().min(1).max(100).required(),
+  lastName: Joi.string().trim().min(1).max(100).required(),
+  role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER').required(),
+});
+
+/** Week 16.5 — profile edit + role change payload. */
+export const updateStaffSchema = Joi.object({
+  firstName: Joi.string().trim().min(1).max(100),
+  lastName: Joi.string().trim().min(1).max(100),
+  role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER'),
+  permissionOverrides: permissionOverridesSchema.allow(null),
+}).min(1);
+
+/** Week 16.6 — audit-trail filters. */
+export const auditLogQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(50),
+  action: Joi.string().trim().min(1).max(100),
+  targetType: Joi.string().trim().min(1).max(50),
+  targetId: Joi.string().trim().min(1).max(64),
+});
+
+/** Week 16.5 — staff directory listing filters. */
+export const staffListQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(50),
+  role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER', 'CUSTOMER'),
+  q: Joi.string().trim().max(100),
+});

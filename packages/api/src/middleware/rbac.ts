@@ -2,11 +2,16 @@ import { Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
 import { AuthRequest } from './auth';
 
+/** Week 16.5 — request shape once resolveTenant has attached per-user overrides. */
+export interface OverrideAwareRequest extends AuthRequest {
+  permissionOverrides?: Record<string, boolean> | null;
+}
+
 /**
  * Role hierarchy - higher number = more privileges
  * Used for hierarchical checks like requireRole('manager') which allows admin too
  */
-const ROLE_HIERARCHY: Record<UserRole, number> = {
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.CUSTOMER]: 1,
   [UserRole.SERVER]: 2,
   [UserRole.KITCHEN]: 2,
@@ -57,7 +62,8 @@ export function requireAnyPermission(...permissions: string[]) {
       });
     }
 
-    if (!permissions.some((permission) => hasPermission(req.user!.role, permission))) {
+    const overrides = (req as OverrideAwareRequest).permissionOverrides ?? undefined;
+    if (!permissions.some((permission) => hasPermissionWithOverrides(req.user!.role, permission, overrides))) {
       return res.status(403).json({
         error: {
           code: 'FORBIDDEN_PERMISSION',
@@ -130,6 +136,7 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'review:moderate',
     'analytics:read',
     'staff:read',
+    'staff:manage',
     'feature-flag:read',
     'feature-flag:manage',
   ],
@@ -146,9 +153,39 @@ function hasPermission(userRole: UserRole, required: string): boolean {
   );
 }
 
+// ── Week 16.5: per-user permission overrides ─────────────────────────────────
+
+/** Roles that may hold per-user permission overrides (custom roles land in Phase 4). */
+export const OVERRIDEABLE_ROLES: UserRole[] = ['MANAGER', 'KITCHEN', 'SERVER'];
+
+/** Seeded default staffing per restaurant; onboarding copies this into User rows. */
+export const DEFAULT_STAFF_ROLES: UserRole[] = ['MANAGER', 'KITCHEN', 'SERVER'];
+
+/**
+ * Role-matrix check extended with per-user overrides (Week 16.5):
+ *   1. an explicit `false` override denies, even when the role grants it
+ *   2. an explicit `true` override grants, even when the role lacks it
+ *   3. no override for the permission → pure matrix lookup (backwards compatible)
+ */
+export function hasPermissionWithOverrides(
+  userRole: UserRole,
+  required: string,
+  overrides?: Record<string, boolean> | null,
+): boolean {
+  if (overrides && Object.prototype.hasOwnProperty.call(overrides, required)) {
+    return overrides[required] === true;
+  }
+  return hasPermission(userRole, required);
+}
+
 /**
  * Permission-based middleware (fine-grained)
  * Usage: router.get('/inventory', requirePermission('inventory:read'), handler)
+ *
+ * Week 16.5 — override-aware: when `resolveTenant` attached the caller's
+ * `permissionOverrides`, an explicit `false` denies even role-granted
+ * permissions and an explicit `true` grants beyond the role. Without overrides
+ * the check falls back to the pure role matrix (backwards compatible).
  */
 export function requirePermission(permission: string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -161,7 +198,8 @@ export function requirePermission(permission: string) {
       });
     }
 
-    if (!hasPermission(req.user.role, permission)) {
+    const overrides = (req as OverrideAwareRequest).permissionOverrides ?? undefined;
+    if (!hasPermissionWithOverrides(req.user.role, permission, overrides)) {
       return res.status(403).json({
         error: {
           code: 'FORBIDDEN_PERMISSION',

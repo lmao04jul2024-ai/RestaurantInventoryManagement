@@ -102,6 +102,9 @@ model User {
   avatar      String?
   isActive    Boolean  @default(true)
   emailVerified Boolean @default(false)
+  /// Week 16.5 — per-user permission overrides: { permission: true(grant) | false(deny) }.
+  /// Absent keys fall through to the role's defaults; explicit false denies even role grants.
+  permissionOverrides Json?
   tenantId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -470,4 +473,21 @@ model Session {
   
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// Week 16.6 — immutable audit trail for permission & role changes.
+/// One row per mutation; actor = who made the change, target = what changed.
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@index([targetType, targetId])
 }
