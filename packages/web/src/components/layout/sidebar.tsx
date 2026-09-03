@@ -53,6 +53,18 @@ const NAV: SidebarSection[] = [
         roles: ['ADMIN', 'MANAGER'],
       },
       {
+        label: 'Staff',
+        href: '/dashboard/staff',
+        icon: '👥',
+        roles: ['ADMIN', 'MANAGER'],
+      },
+      {
+        label: 'Audit Log',
+        href: '/dashboard/audit',
+        icon: '📋',
+        roles: ['ADMIN'],
+      },
+      {
         label: 'Kitchen Display',
         href: '/dashboard/kitchen',
         icon: '👨‍🍳',
