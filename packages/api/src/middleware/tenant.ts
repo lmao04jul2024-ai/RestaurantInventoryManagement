@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import prisma from '../services/database';
 import { normalizeOverrides } from '../services/feature-flags';
+import { runWithTenant } from '../services/tenant-context';
 
 export interface TenantRequest extends AuthRequest {
   tenantId?: string;
@@ -84,7 +85,9 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
 
     req.tenantId = tenant.id;
     req.tenantFeatures = normalizeOverrides(tenant.features);
-    next();
+    // Week 15 — downstream handlers + every Prisma call inherit the tenant via
+    // AsyncLocalStorage, so the data-access-layer guard can auto-scope.
+    runWithTenant(tenant.id, () => next());
   } catch (error) {
     next(error);
   }

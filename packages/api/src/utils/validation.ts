@@ -445,3 +445,43 @@ export const updateFeatureConfigSchema = Joi.object({
     .max(200)
     .required(),
 });
+
+// ── Tenant domain schemas (Week 15) ───────────────────────────────────────────
+
+const currencyCode = Joi.string().trim().uppercase().length(3);
+
+/** Opens a brand-new restaurant account through onboarding (15.4). */
+export const onboardingSchema = Joi.object({
+  restaurantName: Joi.string().trim().min(2).max(120).required(),
+  firstName: Joi.string().trim().min(1).max(100).required(),
+  lastName: Joi.string().trim().min(1).max(100).required(),
+  email: Joi.string().email().max(255).required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .required(),
+  timezone: Joi.string().trim().max(64),
+  currency: currencyCode,
+  taxRate: Joi.number().min(0).max(100).precision(2),
+});
+
+/** Self-service tenant profile/config/billing update (15.2/15.3/15.6). Slug is immutable. */
+export const updateTenantSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(120),
+  email: Joi.string().email().max(255).allow(null),
+  phone: Joi.string().trim().max(20).allow(null),
+  address: Joi.string().trim().max(500).allow(null),
+  timezone: Joi.string().trim().max(64),
+  currency: currencyCode,
+  taxRate: Joi.number().min(0).max(100).precision(2),
+  operatingHours: Joi.object().pattern(Joi.string(), Joi.object().pattern(Joi.string(), Joi.string())).allow(null),
+  plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'),
+  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'),
+  isActive: Joi.boolean(),
+}).min(1);
+
+export const tenantAnalyticsQuerySchema = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+});

@@ -14,6 +14,21 @@ async function main() {
       email: 'demo@restaurant.com',
       phone: '+1234567890',
       address: '123 Restaurant St, Food City',
+      timezone: 'America/New_York',
+      currency: 'USD',
+      taxRate: 8.875,
+      operatingHours: {
+        monday: { open: '09:00', close: '22:00' },
+        tuesday: { open: '09:00', close: '22:00' },
+        wednesday: { open: '09:00', close: '22:00' },
+        thursday: { open: '09:00', close: '22:00' },
+        friday: { open: '09:00', close: '23:00' },
+        saturday: { open: '10:00', close: '23:00' },
+        sunday: { open: '10:00', close: '21:00' }
+      },
+      plan: 'PRO',
+      subscriptionStatus: 'ACTIVE',
+      seatsLimit: 25,
       theme: {
         primaryColor: '#2563eb',
         secondaryColor: '#3b82f6',

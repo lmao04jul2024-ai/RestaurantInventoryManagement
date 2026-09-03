@@ -65,6 +65,15 @@ model Tenant {
   email       String?
   phone       String?
   address     String?
+  // Week 15 — tenant-specific configuration (15.3)
+  timezone    String   @default("UTC")
+  currency    String   @default("USD")
+  taxRate     Float    @default(0)
+  operatingHours Json?  @default("{}")
+  // Week 15 — billing / usage (15.6)
+  plan              String @default("TRIAL")   // TRIAL | BASIC | PRO | ENTERPRISE
+  subscriptionStatus String @default("TRIAL") // TRIAL | ACTIVE | PAST_DUE | CANCELLED
+  seatsLimit        Int    @default(10)
   theme       Json?    @default("{}")
   features    Json?    @default("{}")
   isActive    Boolean  @default(true)
@@ -103,6 +112,7 @@ model User {
   
   @@unique([email, tenantId])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([email])
 }
 
@@ -257,6 +267,7 @@ model Order {
   @@unique([tenantId, orderNumber])
   @@index([customerId])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([status])
   @@index([createdAt])
 }
@@ -340,6 +351,7 @@ model InventoryItem {
   
   @@unique([tenantId, sku])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([supplierId])
 }
 
@@ -399,6 +411,7 @@ model PurchaseOrder {
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([supplierId])
   @@index([status])
 }

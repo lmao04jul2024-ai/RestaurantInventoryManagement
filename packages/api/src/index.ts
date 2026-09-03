@@ -13,6 +13,7 @@ import orderRoutes from './routes/order.routes';
 import reviewRoutes from './routes/review.routes';
 import userRoutes from './routes/user.routes';
 import featureFlagRoutes from './routes/feature-flag.routes';
+import tenantRoutes from './routes/tenant.routes';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/feature-flags', featureFlagRoutes);
+app.use('/api/tenants', tenantRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);
