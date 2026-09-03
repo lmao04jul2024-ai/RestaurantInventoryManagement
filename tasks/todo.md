@@ -1,3 +1,37 @@
+# Session Todo — 2026-09-03 (Week 15 — Multi-Tenancy Implementation)
+
+Context: Weeks 1–11 + 13 + 14 done (**78/144**), git clean at `3d70d13`. Week 12 (QR/QappR) skipped per user. Register today REQUIRES an existing tenant context — there is no self-serve onboarding; `Tenant` lacks config/billing fields; tenant isolation relies on every controller hand-scoping with `req.tenantId`. This week closes those gaps.
+
+## Week 15 — Multi-Tenancy Implementation (Phase 3 W3)
+- [x] **15.1** DB-level isolation — `services/tenant-scope.ts` pure guard (inject `tenantId` into where/data for tenant-owned models) wired as a Prisma `$extends` query layer behind `AsyncLocalStorage` (`tenant-context.ts`); composite `[tenantId, createdAt]` indexes on User/Order/InventoryItem/PurchaseOrder
+- [x] **15.2** Tenant management API — `/api/tenants` public onboarding POST + `/me` GET (any auth) / PATCH (MANAGER+); self-service scope (no cross-tenant super-admin in the RBAC model — documented decision)
+- [x] **15.3** Tenant-specific configurations — Tenant model gains timezone/currency/taxRate/operatingHours; managed via PATCH `/me`; seed sets demo values
+- [x] **15.4** Onboarding workflow — `services/tenant-onboarding.ts` transaction (tenant + ADMIN + default Menu, slugified slug w/ collision suffix) + web `/onboarding` page
+- [x] **15.5** Tenant administration dashboard — `/dashboard/tenants` (ADMIN/MANAGER + sidebar): profile/config editor + plan card
+- [x] **15.6** Usage analytics & billing — Tenant plan/subscriptionStatus/seatsLimit fields; `/me/analytics` (MANAGER+): orders/revenue/customers/menu/inventory/reviews + billing usage
+
+## Verification
+- [x] API: tsc exit 0; eslint 0 errors; jest **185/185** (tenant-scope 18 + tenant-api 10)
+- [x] Web: tsc exit 0; jest **85/85** (+9); eslint clean; `next build` exit 0 with `/dashboard/tenants` (7.18 kB) + `/onboarding` (3.83 kB)
+- [x] Full gate via root fan-out: **306 green** (api 185 / web 85 / shared 31 / mobile 5), ROOT_EXIT=0
+
+## Commit split
+- [x] api `2516479` (schema/service/context/db-layer/controller/routes/validation/index/seed/middleware/specs) → web `25fbf76` (types/service/hooks/pages/components/sidebar/tests) → bookkeeping (tracker/lessons/todo)
+
+## Wrap-up
+- [x] Tracker ticks (84/144); lesson L018; todo close-out
+- [x] Memory MCP termination push per L009/L016: tick → write → verify (`open_nodes`) → commit → `[MEMORY BANK: UPDATED]`
+
+## Review
+- **15.1** Isolation is a Prisma `$extends` query layer (`services/tenant-scope.ts`) driven by `AsyncLocalStorage` context (`services/tenant-context.ts`, resolved in `attachTenantContext`): tenant-owned models get `tenantId` injected into where/data automatically — defense-in-depth beneath controller scoping. Composite `[tenantId, createdAt]` indexes added for hot window queries.
+- **15.2/15.3** `/api/tenants/me` GET (any auth) / PATCH (MANAGER+, `updateTenantSchema` partial-merge) exposes new config fields (timezone/currency/taxRate/operatingHours) plus billing fields (plan/subscriptionStatus/seatsLimit); slug immutable. Scope decision documented: ADMIN is top role, every surface tenant-scoped — no cross-tenant super-admin.
+- **15.4** `createTenantWithAdmin` transaction: tenant + bcrypt-12 ADMIN + starter menu; slug collisions get a numeric suffix. Web `/onboarding` (in `(auth)` shell, linked from login) auto-signs the new ADMIN in via `setCredentials` → `/dashboard`.
+- **15.5/15.6** `/dashboard/tenants` (sidebar ⚙️): profile/config editor incl. 7-day operating-hours editor (missing day = closed; opening a day restores 09:00–22:00 defaults), plan/subscription/isActive controls, seat-usage progressbar, windowed usage stats (7/30/90d) from `/me/analytics` (MANAGER+ aggregate transaction).
+- **Fix during build:** `OnboardingResponse.user.role` widened `string` broke `setCredentials(AuthUser)` — typed with the shared `UserRole` union (lesson L018).
+- **Tests:** api +28 (tenant-scope 18, tenant-api 10) → 185; web +9 (service 4, page 5) → 85. Grand total 306.
+
+---
+
 # Session Todo — 2026-09-03 (Week 14 — Feature Flags System)
 
 Context: Weeks 1–11 + 13 done (**72/144**), git clean at `020ecbd` (Week 13 termination push recovered). Week 12 (QR/QappR) skipped per user. Feature-flag infrastructure already scaffolded: `FeatureFlag` model (name unique, `isEnabled` global default, `metadata` Json) + `Tenant.features` Json for per-tenant overrides — **no schema change needed**. House convention: evaluation = tenant override wins, else global default; fail closed.

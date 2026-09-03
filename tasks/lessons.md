@@ -122,3 +122,11 @@
 - **Root cause:** `Joi.object().pattern()` returns the schema type unchanged (`this`), so the pattern's value type (`boolean | null`) never reaches Joi's generic inference; the destructured value came out as an opaque/optional `{} | undefined`.
 - **Fix:** bypass inference with an explicit payload type: `validateBody<{ overrides: Record<string, boolean | null> }>(updateFeatureConfigSchema, req.body)` — the runtime validation is unchanged, only the compile-time view is pinned. (Same class as L011/L013 — schema-vs-mock mismatches; here it's schema-vs-TYPE argument.)
 - **Rule:** for any `Joi.object().pattern(…)` or `.items()` schema whose values are non-trivial, annotate the `validateBody<T>` generic explicitly rather than decoding the inferred type from the destructured keys. Also: the editor tool rejects `new_text` > 6000 chars — assemble large files with `cat >`/`cat >> <<'EOF'` heredoc chunks and verify the tail after each chunk.
+
+## L018 — Mirror API contract types with the domain unions they flow into, never widened primitives
+- **Date:** 2026-09-03 (Week 15)
+- **Symptom:** `OnboardingResponse.user` in `packages/web/src/types/tenant.ts` typed `role: string` (matching the raw JSON shape); tsc only failed later at the consumption site — `useAuthStore.setCredentials(res.user, …)` rejected it because `AuthUser.role` is the `UserRole` union — pointing at the page, not the drifting type.
+- **Root cause:** hand-mirrored contract types widen domain unions to their base primitive. The error surfaces at the first place the mirrored type meets a properly-typed domain type, which can be far from the definition (L011/L013 family: schema/mock-vs-type drift, here contract-type drift).
+- **Fix:** import the shared union (`import type { UserRole } from '@/types'`) and type the mirrored field with it. Rule of thumb: any web-side type mirroring an API payload that feeds a store/component contract must reuse the domain unions already defined in `@/types`, not `string`/`number` widenings.
+- **Tooling addendum (refines L017):** the editor `insert_line`/counting approach is fragile; the reliable large-file assembly is **anchor-append** — create the file with chunk 1, then each subsequent edit uses `old_text` = the unique tail of the previous chunk and `new_text` = that tail + the next chunk. Verify with a final read/tsc.
+

@@ -123,12 +123,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **14.6** Add feature flag testing utilities (api `feature-flag.spec` **22 tests** — evaluation service, CRUD/409s/404s, config merge+clear, middleware gates; web **11 tests** — service contract 6, lib helpers 2, features-page component 3)
 
 ### Week 15: Multi-Tenancy Implementation
-- [ ] **15.1** Implement tenant isolation at database level
-- [ ] **15.2** Create tenant management API
-- [ ] **15.3** Add tenant-specific configurations
-- [ ] **15.4** Implement tenant onboarding workflow
-- [ ] **15.5** Create tenant administration dashboard
-- [ ] **15.6** Add tenant usage analytics and billing
+- [x] **15.1** Implement tenant isolation at database level (`services/tenant-scope.ts` pure guard injecting tenantId into where/data for tenant-owned models + Prisma `$extends` query layer keyed off `AsyncLocalStorage` (`services/tenant-context.ts`); composite `[tenantId, createdAt]` indexes on User/Order/InventoryItem/PurchaseOrder)
+- [x] **15.2** Create tenant management API (`/api/tenants` public onboarding POST + `/me` GET (any auth) / PATCH (MANAGER+); self-service scope — no cross-tenant super-admin surface, documented decision)
+- [x] **15.3** Add tenant-specific configurations (Tenant gains timezone/currency/taxRate/operatingHours; PATCH `/me` partial-merge validation; seed demo values)
+- [x] **15.4** Implement tenant onboarding workflow (`services/tenant-onboarding.ts` transaction: tenant + ADMIN + default menu, slugified slug w/ collision suffix; web `/onboarding` self-serve page auto-signs-in the new ADMIN)
+- [x] **15.5** Create tenant administration dashboard (`/dashboard/tenants` + sidebar ⚙️ ADMIN/MANAGER: profile/config editor incl. 7-day operating-hours editor, plan/subscription/isActive controls)
+- [x] **15.6** Add tenant usage analytics and billing (Tenant plan/subscriptionStatus/seatsLimit; `/me/analytics` MANAGER+ windowed orders/revenue/customers/menu/low-stock/reviews + billing seat-usage card)
 
 ### Week 16: Role-Based UI & Permissions
 - [ ] **16.1** Create dynamic navigation based on roles
