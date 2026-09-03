@@ -20,7 +20,7 @@ Context: Weeks 1–11 + 13 done (**72/144**), git clean at `020ecbd` (Week 13 te
 
 ## Wrap-up
 - [x] Tracker ticks (78/144); L017 lesson; todo close-out
-- [ ] Memory MCP termination push per L009/L016: tick → write → verify (`open_nodes`) → commit → `[MEMORY BANK: UPDATED]`
+- [x] Memory MCP termination push per L009/L016: tick → write → verify (`open_nodes`) → commit → `[MEMORY BANK: UPDATED]` — Week 14 snapshot + L017 verified at `145ed14`
 
 ## Review
 - **Design:** two layers — global `FeatureFlag` registry (default state) + `Tenant.features` per-restaurant overrides (`{ flagName: boolean }`); effective state = override wins else global, computed centrally in `services/feature-flags.ts` and normalized defensively on tenant resolve. Route gates and the web UI both consume ONE source of truth (`GET /config` map / `attachFeatureFlags`), so no drift between API and UI toggles.
