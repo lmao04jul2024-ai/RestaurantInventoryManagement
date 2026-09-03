@@ -92,6 +92,10 @@ function LoginForm() {
         New here?{' '}
         <Link href="/register" className="font-medium text-primary-600 hover:underline">
           Create an account
+        </Link>{' '}
+        ·{' '}
+        <Link href="/onboarding" className="font-medium text-primary-600 hover:underline">
+          Open a restaurant
         </Link>
       </p>
     </Card>
