@@ -17,7 +17,7 @@ Context: Weeks 1–11 done (66/144), git clean at `3ec5121`. **Week 12 (QR/QappR
 ## Wrap-up
 - [x] Tracker ticks (72/144); todo close-out
 - [x] Logical commits (web feature → bookkeeping)
-- [ ] Memory MCP termination push — **BLOCKED, MCP not attached** (delta = this section; first action next session)
+- [x] Memory MCP termination push — recovered 2026-08-30 at `1243e7d`: L016 logged, empty graph rebuilt (project snapshot + Week 13 decisions + lessons L001–L016), verified via `open_nodes` → `[MEMORY BANK: UPDATED]`
 
 ## Review
 - **Design choice:** RGB triplets + `var()` mapping keep the entire existing class set (`bg-primary-600`, `text-content-muted`, `border-gray-200`…) theme-aware without touching a single component. `data-theme` handles surface flips in CSS pre-hydration; brand palettes hydrate in (classic === CSS defaults → zero visual jump).
