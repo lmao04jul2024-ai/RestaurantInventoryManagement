@@ -20,6 +20,7 @@ const ROLE_LINKS: Record<UserRole, QuickLink[]> = {
     { label: 'Orders', desc: 'Live order workflow & payments', href: '/dashboard/orders', icon: '🧾' },
     { label: 'Staff', desc: 'Team, roles & permission overrides', href: '/dashboard/staff', icon: '👥' },
     { label: 'Feature Flags', desc: 'Per-restaurant feature toggles', href: '/dashboard/features', icon: '🎛️' },
+    { label: 'Customize', desc: 'Theme, branding & live preview', href: '/dashboard/customize', icon: '🎨' },
     { label: 'Settings', desc: 'Profile, config & billing', href: '/dashboard/tenants', icon: '⚙️' },
     { label: 'Audit Log', desc: 'Permission & role change trail', href: '/dashboard/audit', icon: '📜' },
     { label: 'Kitchen Display', desc: 'Live queue for the pass', href: '/dashboard/kitchen', icon: '👨‍🍳' },

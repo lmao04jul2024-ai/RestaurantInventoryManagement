@@ -8,6 +8,7 @@ import {
   parseStoredTheme,
   resolveIsDark,
   saveThemePrefs,
+  tenantThemeToPrefs,
   THEME_BOOT_SCRIPT,
   THEME_STORAGE_KEY,
   type ShadeStep,
@@ -102,5 +103,53 @@ describe('theme lib — persistence (13.6)', () => {
   it('boot script stamps data-theme for both modes before paint', () => {
     expect(THEME_BOOT_SCRIPT).toContain(THEME_STORAGE_KEY);
     expect(THEME_BOOT_SCRIPT).toContain("setAttribute('data-theme',dark?'dark':'light')");
+  });
+});
+
+describe('theme lib — Week 17 brand fonts & tenant mapping', () => {
+  it('emits the font variable only when a brand font is set', () => {
+    const noFont = buildCssVariables(LIGHT, false);
+    expect(noFont['--font-family-sans']).toBeUndefined();
+
+    const withFont = buildCssVariables({ ...LIGHT, font: 'georgia' }, false);
+    expect(withFont['--font-family-sans']).toContain('Georgia');
+
+    const inter = buildCssVariables({ ...LIGHT, font: 'inter' }, false);
+    expect(inter['--font-family-sans']).toContain('Inter');
+  });
+
+  it('validates the optional font against the catalog', () => {
+    expect(isValidThemePrefs({ preset: 'classic', mode: 'light', font: 'georgia' })).toBe(true);
+    expect(isValidThemePrefs({ preset: 'classic', mode: 'light', font: 'comic-sans' as never })).toBe(false);
+  });
+
+  it('tenantThemeToPrefs maps the published branding onto ThemePrefs', () => {
+    expect(tenantThemeToPrefs(null)).toBeNull();
+    expect(tenantThemeToPrefs(undefined)).toBeNull();
+
+    expect(tenantThemeToPrefs({ preset: 'emerald', mode: 'dark' })).toEqual({
+      preset: 'emerald',
+      mode: 'dark',
+    });
+
+    expect(
+      tenantThemeToPrefs({
+        preset: 'custom',
+        mode: 'light',
+        custom: { primary: '#DC2626', secondary: '#7C3AED' },
+        branding: { fontFamily: 'trebuchet' },
+      }),
+    ).toEqual({
+      preset: 'custom',
+      mode: 'light',
+      custom: { primary: '#DC2626', secondary: '#7C3AED' },
+      font: 'trebuchet',
+    });
+  });
+
+  it('tenantThemeToPrefs rejects documents with invalid shape', () => {
+    expect(tenantThemeToPrefs({ preset: 'neon' as never, mode: 'light' })).toBeNull();
+    // custom preset without both brand hexes is invalid
+    expect(tenantThemeToPrefs({ preset: 'custom', mode: 'light' })).toBeNull();
   });
 });

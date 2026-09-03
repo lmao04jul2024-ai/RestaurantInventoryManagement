@@ -18,9 +18,41 @@ export interface ThemePrefs {
   mode: ThemeMode;
   /** Base brand hexes for the `custom` preset (600 anchors). */
   custom?: { primary: string; secondary: string };
+  /** Week 17 brand font — emitted as `--font-family-sans`; undefined = default stack. */
+  font?: TenantFontId;
 }
 
 export const DEFAULT_THEME_PREFS: ThemePrefs = { preset: 'classic', mode: 'system' };
+
+// ── Week 17 branding fonts & tenant theme document ──────────────────────────
+
+/**
+ * Web-safe stacks (no font files shipped); `inter` matches the globals.css
+ * default. Mirrored server-side by tenantThemeSchema (validation.ts) —
+ * keep the two unions in sync.
+ */
+export const FONT_OPTIONS = {
+  inter: { label: 'Inter (default)', stack: "'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif" },
+  georgia: { label: 'Georgia (classic serif)', stack: "Georgia, 'Times New Roman', serif" },
+  trebuchet: { label: 'Trebuchet (friendly)', stack: "'Trebuchet MS', 'Segoe UI', Tahoma, sans-serif" },
+  mono: { label: 'Mono', stack: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace" },
+} as const;
+
+export type TenantFontId = keyof typeof FONT_OPTIONS;
+export const FONT_FAMILY_VAR = '--font-family-sans';
+
+export interface TenantBranding {
+  logoUrl?: string | null;
+  fontFamily?: TenantFontId | null;
+}
+
+/** The `Tenant.theme` JSON document (API-validated by tenantThemeSchema). */
+export interface TenantTheme {
+  preset: PresetId;
+  mode: ThemeMode;
+  custom?: { primary: string; secondary: string };
+  branding?: TenantBranding | null;
+}
 
 const STEPS: ShadeStep[] = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
 
@@ -192,6 +224,8 @@ export function buildCssVariables(prefs: ThemePrefs, systemPrefersDark: boolean)
     }, {} as Record<string, string>),
     ...(dark ? DARK_SURFACES : LIGHT_SURFACES),
     ...(dark ? GRAYS_DARK : GRAYS_LIGHT),
+    // Week 17 — brand font rides along with the palette (undefined = CSS default).
+    ...(prefs.font ? { [FONT_FAMILY_VAR]: FONT_OPTIONS[prefs.font].stack } : {}),
   };
 }
 
@@ -212,6 +246,7 @@ export function isValidThemePrefs(value: unknown): value is ThemePrefs {
     const c = v.custom as ThemePrefs['custom'] | undefined;
     if (!c || !HEX_RE.test(c.primary) || !HEX_RE.test(c.secondary)) return false;
   }
+  if (v.font !== undefined && !(v.font in FONT_OPTIONS)) return false;
   return true;
 }
 
@@ -234,6 +269,22 @@ export function loadThemePrefs(): ThemePrefs | null {
 export function saveThemePrefs(prefs: ThemePrefs): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(prefs));
+}
+
+/**
+ * Week 17 — maps a published `Tenant.theme` document onto per-user ThemePrefs
+ * (used by the provider's signed-in fallback and the console preview).
+ * Returns null for absent/invalid documents so callers keep their defaults.
+ */
+export function tenantThemeToPrefs(theme: TenantTheme | null | undefined): ThemePrefs | null {
+  if (!theme || typeof theme !== 'object') return null;
+  const prefs: ThemePrefs = {
+    preset: theme.preset,
+    mode: theme.mode,
+    ...(theme.custom ? { custom: theme.custom } : {}),
+    ...(theme.branding?.fontFamily ? { font: theme.branding.fontFamily } : {}),
+  };
+  return isValidThemePrefs(prefs) ? prefs : null;
 }
 
 /**

@@ -7,7 +7,7 @@ jest.mock('@/services/tenants.service', () => ({
   },
 }));
 
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TenantsPage from '@/components/dashboard/tenants-page';
 import { tenantService } from '@/services/tenants.service';

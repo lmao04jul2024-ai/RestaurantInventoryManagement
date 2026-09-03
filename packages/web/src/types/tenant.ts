@@ -3,7 +3,11 @@
  * (packages/api/src/controllers/tenant.controller.ts).
  */
 
+import type { TenantTheme } from '@/lib/theme';
 import type { UserRole } from '@/types';
+
+// Week 17 — the tenant branding document types live beside the theme engine.
+export type { TenantBranding, TenantTheme } from '@/lib/theme';
 
 export interface OperatingHoursDay {
   open: string;
@@ -26,6 +30,8 @@ export interface TenantProfile {
   currency: string;
   taxRate: number;
   operatingHours: OperatingHours | null;
+  /** Week 17 — published branding/theme document (null = house defaults). */
+  theme?: TenantTheme | null;
   plan: PlanTier;
   subscriptionStatus: SubscriptionStatus;
   seatsLimit: number;
@@ -47,6 +53,7 @@ export interface TenantUpdatePayload {
   plan?: PlanTier;
   subscriptionStatus?: SubscriptionStatus;
   isActive?: boolean;
+  theme?: TenantTheme | null;
 }
 
 export interface OnboardingPayload {
