@@ -14,6 +14,7 @@ jest.mock('../src/services/database', () => ({
 }));
 
 import prisma from '../src/services/database';
+import { Prisma } from '@prisma/client';
 import type { TenantRequest } from '../src/middleware/tenant';
 import type { MockRes } from './helpers/mock-express';
 import { asRequest, createRes } from './helpers/mock-express';
@@ -255,5 +256,95 @@ describe('tenant usage analytics & billing (15.6)', () => {
     const { next } = await run(getTenantAnalytics, tenantReq({ query: {} }));
     expect(next.mock.calls[0][0]).toMatchObject({ code: 'TENANT_NOT_FOUND', statusCode: 404 });
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('tenant branding & theme (Week 17)', () => {
+  const { updateMyTenant } = require('../src/controllers/tenant.controller');
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('persists a valid theme/branding document', async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+    (prisma.tenant.update as jest.Mock).mockResolvedValue(
+      makeTenantProfileRow({
+        theme: {
+          preset: 'custom',
+          mode: 'dark',
+          custom: { primary: '#DC2626', secondary: '#7C3AED' },
+          branding: { logoUrl: 'https://cdn.example.com/logo.png', fontFamily: 'georgia' },
+        },
+      }),
+    );
+
+    const theme = {
+      preset: 'custom',
+      mode: 'dark',
+      custom: { primary: '#DC2626', secondary: '#7C3AED' },
+      branding: { logoUrl: 'https://cdn.example.com/logo.png', fontFamily: 'georgia' },
+    };
+    const { res } = await run(updateMyTenant, { ...tenantReq(), body: { theme } });
+
+    expect(prisma.tenant.update).toHaveBeenCalledWith({
+      where: { id: 'tenant-1' },
+      data: { theme },
+    });
+    expect(bodyOf(res).data).toMatchObject({ theme: { preset: 'custom', mode: 'dark' } });
+  });
+
+  it('clears branding via theme null (Prisma.DbNull, never raw null)', async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+    (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ theme: {} }));
+
+    await run(updateMyTenant, { ...tenantReq(), body: { theme: null } });
+
+    expect(prisma.tenant.update).toHaveBeenCalledWith({
+      where: { id: 'tenant-1' },
+      data: { theme: Prisma.DbNull },
+    });
+  });
+
+  it('rejects a non-hex custom color with 400', async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+    const { next } = await run(updateMyTenant, {
+      ...tenantReq(),
+      body: { theme: { preset: 'custom', mode: 'light', custom: { primary: 'red', secondary: '#7C3AED' } } },
+    });
+
+    expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
+    expect(prisma.tenant.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-https logo URL with 400', async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+    const { next } = await run(updateMyTenant, {
+      ...tenantReq(),
+      body: {
+        theme: {
+          preset: 'classic',
+          mode: 'system',
+          branding: { logoUrl: 'http://insecure.example.com/logo.png' },
+        },
+      },
+    });
+
+    expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
+    expect(prisma.tenant.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown fontFamily with 400', async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+    const { next } = await run(updateMyTenant, {
+      ...tenantReq(),
+      body: {
+        theme: { preset: 'classic', mode: 'system', branding: { fontFamily: 'comic-sans' } },
+      },
+    });
+
+    expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
+    expect(prisma.tenant.update).not.toHaveBeenCalled();
   });
 });

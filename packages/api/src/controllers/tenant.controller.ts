@@ -109,8 +109,17 @@ export async function updateMyTenant(req: TenantRequest, res: Response, next: Ne
       'plan',
       'subscriptionStatus',
       'isActive',
+      'theme',
     ] as const) {
-      if (data[key] !== undefined) updateData[key] = data[key] as never;
+      if (data[key] === undefined) continue;
+      // Week 17 — Prisma rejects raw `null` for Json? columns ("Provided value
+      // is not a Json value"); clearing one requires the DbNull sentinel. This
+      // also fixes the latent operatingHours-null path from Week 15.
+      if ((key === 'theme' || key === 'operatingHours') && data[key] === null) {
+        updateData[key] = Prisma.DbNull;
+        continue;
+      }
+      updateData[key] = data[key] as never;
     }
 
     const updated = await prisma.tenant.update({ where: { id: tenantId }, data: updateData });

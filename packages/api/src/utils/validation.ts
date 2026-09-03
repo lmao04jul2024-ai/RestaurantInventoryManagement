@@ -467,6 +467,31 @@ export const onboardingSchema = Joi.object({
   taxRate: Joi.number().min(0).max(100).precision(2),
 });
 
+// ── Tenant branding & theme schema (Week 17) ─────────────────────────────────
+
+const HEX_COLOR = Joi.string()
+  .pattern(/^#[0-9a-fA-F]{6}$/)
+  .message('must be a 6-digit hex color like #DC2626');
+
+/**
+ * Week 17 — the `Tenant.theme` JSON document: brand palette defaults plus
+ * branding assets. Mirrors packages/web/src/lib/theme.ts (ThemePrefs) and
+ * types/tenant.ts (TenantTheme) — keep the three unions in sync.
+ * `logoUrl` is https-only to prevent mixed-content injection on the storefront.
+ */
+export const tenantThemeSchema = Joi.object({
+  preset: Joi.string().valid('classic', 'emerald', 'sunset', 'custom').required(),
+  mode: Joi.string().valid('light', 'dark', 'system').required(),
+  custom: Joi.object({
+    primary: HEX_COLOR.required(),
+    secondary: HEX_COLOR.required(),
+  }).allow(null),
+  branding: Joi.object({
+    logoUrl: Joi.string().uri({ scheme: ['https'] }).max(500).allow(null),
+    fontFamily: Joi.string().valid('inter', 'georgia', 'trebuchet', 'mono').allow(null),
+  }).allow(null),
+}).allow(null);
+
 /** Self-service tenant profile/config/billing update (15.2/15.3/15.6). Slug is immutable. */
 export const updateTenantSchema = Joi.object({
   name: Joi.string().trim().min(2).max(120),
@@ -480,6 +505,8 @@ export const updateTenantSchema = Joi.object({
   plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'),
   subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'),
   isActive: Joi.boolean(),
+  // Week 17.2/17.5 — tenant-wide theme & branding document.
+  theme: tenantThemeSchema,
 }).min(1);
 
 export const tenantAnalyticsQuerySchema = Joi.object({
