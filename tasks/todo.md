@@ -1,38 +1,42 @@
-# Week 16 — Role-Based UI & Permissions (Complete)
+# Week 17 — Customization UI & Admin Dashboard (17.1–17.6)
 
 ## Context
-- Tracker ticks 16.1–16.6 (Role-Based UI & Permissions); memory title "Push Notifications" was stale (old roadmap) — corrected at termination.
-- Latent bug fixed: `(dashboard)/page.tsx` collided with `app/page.tsx` at `/`; `/dashboard` (login fallback + sidebar link) 404'd. Dashboard home moved to `(dashboard)/dashboard/page.tsx`, old file deleted.
+- Tracker 90/144 (Weeks 1–11, 13–16 done; 12 skipped per user). Next: Week 17 Customization UI & Admin Dashboard.
+- Already shipped in earlier weeks (ticks 17.3/17.4 are consolidation, not rebuild): feature-flag config UI (Week 14 `/dashboard/features`), tenant management UI (Week 15 `/dashboard/tenants`).
+- Gap: theme engine (Week 13) is per-user localStorage only; `Tenant.theme Json?` exists but is unused end-to-end. Week 17 makes branding tenant-level, persisted, previewable.
 
-## Plan (as implemented — converged staff/audit architecture)
+## Plan
 ### API
-- [x] Schema: `User.permissionOverrides Json?` (deny/allow map) + `AuditLog` model (tenantId, actorId, action, targetType, targetId, metadata) → `prisma generate`
-- [x] rbac.ts: exported `ROLE_HIERARCHY`; `OverrideAwareRequest` + `hasPermissionWithOverrides` (role matrix + per-user override, deny wins); requirePermission/requireAnyPermission consult `req.permissionOverrides` (undefined fallback → pure matrix, backwards compatible); `staff:read`/`staff:manage` matrix entries
-- [x] tenant.ts `resolveTenant`: fetches `user.permissionOverrides` alongside the tenant → `req.permissionOverrides`
-- [x] services/audit.ts (`writeAuditLog` never-throw, `listAuditLogs` w/ filters+pagination); staff.controller: `listStaff`/`createStaff`/`updateStaff` (role + tri-state overrides, `CANNOT_MODIFY_ADMIN`, `CANNOT_CHANGE_OWN_ROLE`, tenant-scoped, audited transactionally) + `getAuditLogs`; routes `/api/staff` (staff:read/staff:manage) + `/api/audit` (ADMIN); validation schemas; index mounts
-- [x] Tests: staff-audit.spec **24 tests** (override matrix, scoping/guards, merge semantics, audit rows; tenant-spec mock updated for the user lookup)
+- [ ] validation.ts: `tenantThemeSchema` (preset classic|emerald|sunset|custom, mode light|dark|system, custom primary/secondary 6-digit hex, branding.logoUrl https URI ≤500, branding.fontFamily inter|georgia|trebuchet|mono, whole object allow(null)); add `theme` to `updateTenantSchema`
+- [ ] tenant.controller `updateMyTenant`: accept `theme`; map JSON `null` (theme + operatingHours) to `Prisma.DbNull` (raw null throws on real Prisma Json? columns)
+- [ ] Tests: tenant-api.spec Week 17 block — persists valid theme, rejects bad hex / non-https logo (400), theme null → DbNull
 
 ### Web
-- [x] types/staff.ts + services/staff.service.ts + hooks/use-staff.ts (list/create/update w/ tri-state payload)
-- [x] `(dashboard)/dashboard/page.tsx` role-aware home (`dashboard-index.tsx`) — **deleted** `(dashboard)/page.tsx` (fixes `/dashboard` 404 + `/` collision)
-- [x] `/dashboard/staff` staff-page (directory w/ role filter, create form, ADMIN-only tri-state editor over client `PERMISSION_CATALOG`); `/dashboard/audit` audit-page viewer; sidebar 👥/🛡️ entries
-- [x] tests: staff.service / staff-page / audit-page suites (+14) with L019-informed label/aria fixes
+- [ ] lib/theme.ts: `FONT_OPTIONS` catalog + `TenantFontId`; `ThemePrefs.font?`; `buildCssVariables` emits `--font-family-sans`; `isValidThemePrefs` accepts font; `tenantThemeToPrefs()` mapper
+- [ ] types/tenant.ts: `TenantTheme`/`TenantBranding` (reuse domain unions per L018); `TenantProfile.theme?`; `TenantUpdatePayload.theme?`
+- [ ] theme-provider: track prefs `source` (defaults/local/tenant — only local persists); signed-in fallback applies `tenant.theme` when no local prefs (user prefs always win)
+- [ ] 17.1 `/dashboard/customize` ADMIN console: tabbed layout (Appearance | Branding | Features & Settings), sidebar 🎨 (ADMIN) + dashboard-index quick link
+- [ ] 17.2 theme-editor (presets, custom colors, default mode) → draft → Publish `PATCH /tenants/me { theme }`
+- [ ] 17.5 branding-editor (logo URL w/ preview, font select) into `theme.branding`
+- [ ] 17.6 theme-preview-card: scoped mini-storefront rendered from draft CSS vars + font (live, pre-publish)
+- [ ] 17.3/17.4 links tab → cross-links to /dashboard/features + /dashboard/tenants
+- [ ] header.tsx: render tenant logo when `theme.branding.logoUrl` set (dashboard shell)
+- [ ] Tests: theme.spec font/tenantThemeToPrefs additions; customization-page.spec; tenant-theme provider fallback spec
 
 ## Verification
-- [x] API: tsc 0; eslint 0 errors (28 pre-existing warnings); jest **209/209** (+24)
-- [x] Web: tsc 0; jest **99/99** (+14); eslint clean; `next build` exit 0 — `/dashboard` 2.67 kB, `/dashboard/staff` 3.58 kB, `/dashboard/audit` 1.89 kB, no duplicate `/`
-- [x] Root fan-out ROOT_EXIT=0 — **344 green** (api 209 / web 99 / shared 31 / mobile 5)
+- [ ] API: tsc 0, eslint clean-ish, jest green (+new)
+- [ ] Web: tsc 0, jest green (+new), eslint, `next build` exit 0
+- [ ] Tracker ticks 17.1–17.6 (96/144); todo close-out; commits api → web → bookkeeping; memory termination push
 
-## Commit split
-- [x] api `4967dcb` → web `33d31ea` (includes deletion of `(dashboard)/page.tsx`) → bookkeeping (tracker 90/144, L019, todo)
-
-## Wrap-up
-- [x] Tracker ticks (90/144); lesson L019; todo close-out
-- [x] Memory MCP termination push per L009/L016: tick → write → verify (`open_nodes`) → commit → `[MEMORY BANK: UPDATED]` (stale "Week 16 Push Notifications" title corrected)
+## Notes
+- API PATCH /tenants/me stays MANAGER+ (Week 15 contract unchanged); the console UI is ADMIN-only per the Customization Engine spec ("only admins can change themes").
+- Tenant theme applies app-wide only to signed-in users (no public tenant-resolution endpoint for anonymous shoppers yet — documented limitation).
 
 ## Review
-- **Converged design:** dedicated `staff.controller` + `/api/staff` (staff:read/staff:manage) instead of extending user.controller; `GET /api/audit` gated by `requireRole(ADMIN)` (not a permission); permission catalog lives client-side (`PERMISSION_CATALOG` in staff-page) — the server validates overrides as a `boolean|null` map with deny-wins semantics (L017-typed `validateBody`).
-- **Guard rails:** ADMIN targets immutable via staff API, no self-role-change, tenant-scoped lookups, audit rows written in the same `$transaction` as mutations; `AuditLog` never read-modified (insert-only service).
-- **Override plumbing:** `resolveTenant` attaches `req.permissionOverrides`; `hasPermissionWithOverrides` keeps existing suites green (no overrides → pure role matrix).
-- **Latent routing bug fixed:** `/dashboard` (login fallback + sidebar href) had no route while `(dashboard)/page.tsx` shadowed `/`; now `/dashboard` is the role-aware home and `/` is solely the marketing page.
-- **Lesson L019:** partial-edit spec rewrites leave the stale body trailing — truncate at the seam (`sed -i '' '<line>,$d'`) or rewrite whole, then check `tail`/`wc -l`; give form controls aria-labels distinct from visible filter labels.
+- **Converged design:** tenant branding lives in the existing `Tenant.theme Json?` column (no new model), validated by a single `tenantThemeSchema` and surfaced through the self-service `PATCH /api/tenants/me` (Week 15 contract unchanged — still MANAGER+). The console UI is ADMIN-only per the Customization Engine spec.
+- **Three-way type sync:** `TenantTheme`/`TenantFontId` live in `lib/theme.ts` (the engine's domain), re-exported from `types/tenant.ts` for the API-contract mirror, and mirrored by the server `tenantThemeSchema` union — documented at each site.
+- **Preview isolation:** the live storefront preview renders inside a scoped container whose CSS vars are inherited, so drafting never touches `:root` (no flash to the rest of the dashboard).
+- **Persistence semantics:** provider tracks prefs `source` (defaults/local/tenant); only explicit user choices persist to localStorage, so a later tenant rebrand still reaches users who never customized, and anonymous visitors never trigger a tenant fetch.
+- **Latent fix:** `updateMyTenant` now maps JSON `null` to `Prisma.DbNull` for both `theme` and `operatingHours` (raw `null` throws on real Prisma `Json?` columns — the operatingHours path shipped in Week 15 was silently broken for the clear case).
+- **Verification:** api tsc 0 / 214 green (+5) · web tsc 0 / eslint 0 / 112 green (+~16) · `next build` exit 0, `/dashboard/customize` 9.88 kB, 24 routes.
+- **Commit split:** api `b164fa6` → web `1e08f9f` → bookkeeping (tracker 96/144, todo).
