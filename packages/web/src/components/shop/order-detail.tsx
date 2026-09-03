@@ -8,6 +8,7 @@ import { StatusBadge, PaymentBadge } from '@/components/orders/order-badges';
 import { formatPrice } from '@/lib/menu-ui';
 import { getApiErrorMessage } from '@/lib/api';
 import { useOrder, usePayOrder, isOrderActive } from '@/hooks/use-orders';
+import { useIsFeatureEnabled } from '@/hooks/use-feature-flags';
 import type { OrderStatus } from '@/types/order';
 import ReviewForm from '@/components/shop/review-form';
 
@@ -31,6 +32,8 @@ export default function OrderDetail({ id }: { id: string }) {
     !o || isOrderActive(o.status) ? 5_000 : false,
   );
   const pay = usePayOrder();
+  // Week 14 — restaurant can switch off customer reviews via the flag system.
+  const reviewsEnabled = useIsFeatureEnabled('customer_reviews');
 
   if (isLoading || !order) {
     return (
@@ -199,8 +202,8 @@ export default function OrderDetail({ id }: { id: string }) {
         </Link>
       </div>
 
-      {/* Week 11.3 — review/rate after completion */}
-      {order.status === 'COMPLETED' && (
+      {/* Week 11.3 — review/rate after completion (gated by 'customer_reviews' flag) */}
+      {reviewsEnabled && order.status === 'COMPLETED' && (
         <ReviewForm
           orderId={order.id}
           existing={order.reviews?.[0] ?? null}
