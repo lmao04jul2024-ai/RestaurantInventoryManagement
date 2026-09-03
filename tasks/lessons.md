@@ -130,3 +130,9 @@
 - **Fix:** import the shared union (`import type { UserRole } from '@/types'`) and type the mirrored field with it. Rule of thumb: any web-side type mirroring an API payload that feeds a store/component contract must reuse the domain unions already defined in `@/types`, not `string`/`number` widenings.
 - **Tooling addendum (refines L017):** the editor `insert_line`/counting approach is fragile; the reliable large-file assembly is **anchor-append** — create the file with chunk 1, then each subsequent edit uses `old_text` = the unique tail of the previous chunk and `new_text` = that tail + the next chunk. Verify with a final read/tsc.
 
+## L019 — A partial-edit "rewrite" of a spec only swaps the header; verify the tail or rewrite whole
+- **Date:** 2026-09-03 (Week 16)
+- **Symptom:** rewriting `staff-page.spec.tsx` by replacing the opening `describe(...)`/imports block left the **old draft body trailing below** the new content — two `describe` blocks with colliding queries; failures surfaced much later as confusing `getByLabelText` multiple-element errors instead of an obvious syntax/duplicate error.
+- **Root cause:** an editor replacement anchored on the file's *head* naturally leaves everything after the anchor untouched. A "rewrite" that isn't a whole-file write is a splice, and splices need an explicit cut point.
+- **Fix / rule:** when replacing an entire test suite (or any file) mid-flight, either (a) rewrite the whole file in one deterministic pass (`cat > file <<'EOF'`), or (b) after the head swap, truncate the stale remainder at the seam (`sed -i '' '<line>,$d'`) and anchor-append the rest — then always check `tail`/`wc -l` before running tests. Companion UI-test rule: visible label text (`Role` in a filter bar) collides with `getByLabelText` for form controls elsewhere — give editor selects distinct aria-labels (e.g. "New staff role") and assert on those.
+

@@ -131,12 +131,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **15.6** Add tenant usage analytics and billing (Tenant plan/subscriptionStatus/seatsLimit; `/me/analytics` MANAGER+ windowed orders/revenue/customers/menu/low-stock/reviews + billing seat-usage card)
 
 ### Week 16: Role-Based UI & Permissions
-- [ ] **16.1** Create dynamic navigation based on roles
-- [ ] **16.2** Implement permission-based component rendering
-- [ ] **16.3** Add role-specific dashboards
-- [ ] **16.4** Create permission management UI
-- [ ] **16.5** Implement role hierarchy and inheritance
-- [ ] **16.6** Add audit logging for permission changes
+- [x] **16.1** Create dynamic navigation based on roles (sidebar gains Staff 👥 ADMIN/MANAGER + Audit 🛡️ ADMIN entries on the existing role-filtered NAV; new role-aware `/dashboard` index replaces the 404-ing login target and the duplicate dashboard at `/` is deleted)
+- [x] **16.2** Implement permission-based component rendering (staff page edit affordances + tri-state editor gated by `isAdmin` role check via useAuth; pages wrapped in `ProtectedRoute roles`; audit viewer ADMIN-only)
+- [x] **16.3** Add role-specific dashboards (`/dashboard` index `dashboard-index.tsx` — role-aware quick links; fixes latent `/` route collision + missing `/dashboard` index)
+- [x] **16.4** Create permission management UI (`/dashboard/staff` ADMIN/MANAGER: staff directory w/ role filter, create form (`staff:manage`), per-user tri-state override editor inherit/allow/deny (deny wins) ADMIN-only)
+- [x] **16.5** Implement role hierarchy and inheritance (`rbac.ts`: exported `ROLE_HIERARCHY`; `hasPermissionWithOverrides` role-matrix + per-user override, deny wins; `requirePermission`/`requireAnyPermission` consult `req.permissionOverrides`; `User.permissionOverrides Json?`; `resolveTenant` attaches overrides; `staff:read`/`staff:manage` matrix entries)
+- [x] **16.6** Add audit logging for permission changes (`AuditLog` model + `services/audit.ts` `writeAuditLog` recorded transactionally on role/override mutations; `GET /api/audit` ADMIN w/ filters+pagination; `/dashboard/audit` viewer)
 
 ### Week 17: Customization UI & Admin Dashboard
 - [ ] **17.1** Create admin dashboard layout
