@@ -115,3 +115,10 @@
 1. An unavailable MCP is a **DEFERRAL, never a close-out**. When the termination push is blocked: record the full delta in todo.md (including the covered git HEAD), append a self-contained L-entry, AND make the memory replay the first action of the next session.
 2. Replay order is the fixed L009 sequence: tick the todo item → write memory (snapshot/decisions/lessons) → verify via `open_nodes` → commit bookkeeping → `[MEMORY BANK: UPDATED]`.
 3. **Check:** any open "termination push BLOCKED / pending" line in todo means the next task's first commit must be the memory replay. If the MCP graph comes back EMPTY (fresh instance), rebuild the snapshot from todo/tracker/lessons rather than trusting old entity names.
+
+## L017 — Joi `.pattern()` sub-schemas leave inferred types opaque; pass an explicit `<T>` to validateBody
+- **Date:** 2026-09-03 (Week 14)
+- **Symptom:** `const { overrides } = validateBody(updateFeatureConfigSchema, req.body)` where the schema was `Joi.object({ overrides: Joi.object().pattern(flagName, Joi.boolean().allow(null)).required() })` — tsc rejected `overrides[name] = val` with `Type '{} | undefined' is not assignable to type 'boolean'`.
+- **Root cause:** `Joi.object().pattern()` returns the schema type unchanged (`this`), so the pattern's value type (`boolean | null`) never reaches Joi's generic inference; the destructured value came out as an opaque/optional `{} | undefined`.
+- **Fix:** bypass inference with an explicit payload type: `validateBody<{ overrides: Record<string, boolean | null> }>(updateFeatureConfigSchema, req.body)` — the runtime validation is unchanged, only the compile-time view is pinned. (Same class as L011/L013 — schema-vs-mock mismatches; here it's schema-vs-TYPE argument.)
+- **Rule:** for any `Joi.object().pattern(…)` or `.items()` schema whose values are non-trivial, annotate the `validateBody<T>` generic explicitly rather than decoding the inferred type from the destructured keys. Also: the editor tool rejects `new_text` > 6000 chars — assemble large files with `cat >`/`cat >> <<'EOF'` heredoc chunks and verify the tail after each chunk.

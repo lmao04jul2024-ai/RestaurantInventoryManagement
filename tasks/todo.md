@@ -1,3 +1,37 @@
+# Session Todo — 2026-09-03 (Week 14 — Feature Flags System)
+
+Context: Weeks 1–11 + 13 done (**72/144**), git clean at `020ecbd` (Week 13 termination push recovered). Week 12 (QR/QappR) skipped per user. Feature-flag infrastructure already scaffolded: `FeatureFlag` model (name unique, `isEnabled` global default, `metadata` Json) + `Tenant.features` Json for per-tenant overrides — **no schema change needed**. House convention: evaluation = tenant override wins, else global default; fail closed.
+
+## Week 14 — Feature Flags System (Phase 3 W2)
+- [x] **14.1** Feature flag schema + seed — document existing `FeatureFlag`/`Tenant.features` contract; align seed keys to flag names (snake_case); add `customer_reviews` flag used as the real gate
+- [x] **14.2** API endpoints — `/api/feature-flags` (GET list w/ effective state, POST/PATCH/DELETE CRUD, RBAC `feature-flag:read`/`manage` = MANAGER+) + `/config` (GET effective map for any tenant user, PATCH overrides MANAGER+)
+- [x] **14.3** Management UI — `/dashboard/features` + sidebar entry (ADMIN/MANAGER): flag list, create form, global toggle, per-tenant override select (Default/On/Off), delete
+- [x] **14.4** Route protection middleware — `attachFeatureFlags` (loads flags + tenant overrides → `req.featureFlags`) + `requireFeature(name)` (403 FEATURE_DISABLED, fail closed); gates `POST /api/reviews` behind `customer_reviews`
+- [x] **14.5** Client-specific configs — `Tenant.features` override mechanism via PATCH `/config`; web `useFeaturesConfig()`/`useIsFeatureEnabled()`; customer review form gated on `customer_reviews`
+- [x] **14.6** Testing utilities — api `feature-flag.spec.ts` (CRUD, RBAC, config, evaluation, middleware) + `factories/feature-flag.ts`; web `feature-flags.service.spec.ts` + `features-page.spec.tsx`
+
+## Verification
+- [x] API: tsc exit 0; eslint 0 errors (28 pre-existing src warnings); jest **157/157** incl. 22-test feature-flag suite
+- [x] Web: tsc exit 0; jest **76/76** incl. 11 new (6 service / 2 lib / 3 page); eslint clean; next build exit 0 incl. `/dashboard/features`
+- [x] Full gate via root fan-out: api 157 / web 76 / shared 31 / mobile 5 = **269 tests green**
+
+## Commit split
+- [x] api (service/middleware/controller/routes/rbac+tenant/index/reviews gate/seed/specs+factory) → web (types/service/hooks/lib/page+route/sidebar/order-detail gate/tests) → bookkeeping (tracker/lessons/todo)
+
+## Wrap-up
+- [x] Tracker ticks (78/144); L017 lesson; todo close-out
+- [ ] Memory MCP termination push per L009/L016: tick → write → verify (`open_nodes`) → commit → `[MEMORY BANK: UPDATED]`
+
+## Review
+- **Design:** two layers — global `FeatureFlag` registry (default state) + `Tenant.features` per-restaurant overrides (`{ flagName: boolean }`); effective state = override wins else global, computed centrally in `services/feature-flags.ts` and normalized defensively on tenant resolve. Route gates and the web UI both consume ONE source of truth (`GET /config` map / `attachFeatureFlags`), so no drift between API and UI toggles.
+- **Real integration:** `customer_reviews` flag (seed default ON) gates `POST /api/reviews` server-side (`requireFeature`) and the customer ReviewForm client-side (`useIsFeatureEnabled`) — a restaurant can disable reviews for its tenant in seconds, both layers honored. Defaults preserve existing behavior exactly.
+- **Middleware:** `attachFeatureFlags` loads all flags + tenant overrides once → `req.featureFlags`; `requireFeature(name)` fails closed (403 FEATURE_DISABLED, incl. unregistered flags). Route ordering keeps literal `/config` ahead of `/:id`.
+- **Config PATCH semantics:** merge (not replace) — `true|false` sets, `null` clears, unknown flag names rejected 400 FEATURE_NOT_FOUND. Only boolean values survive `normalizeOverrides`, so garbage Json can't poison evaluation.
+- **L017:** Joi `.pattern()` sub-schemas leave inferred types opaque (`{} | undefined`) — pass an explicit payload generic to `validateBody<T>()` instead of fighting schema inference.
+- **Tests:** api +22 (evaluation matrix incl. garbage overrides, CRUD 201/204/404/409, config merge/clear/unknown, all middleware branches) → 157; web +11 (service contracts, slugify/resolve helpers, page: pills, slugified create, override select via `within(row)`) → 76. Grand total **269**. Commit split: api → web → bookkeeping.
+
+---
+
 # Session Todo — 2026-08-30 (Week 13 — Theme Engine Foundation)
 
 Context: Weeks 1–11 done (66/144), git clean at `3ec5121`. **Week 12 (QR/QappR) SKIPPED per user** — revisit after Phase 3. No schema changes needed. ⚠️ Memory MCP still unattached in this session — pending delta recorded here (same blocker as Week 11, see `3ec5121`).

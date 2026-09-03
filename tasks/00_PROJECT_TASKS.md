@@ -115,12 +115,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **13.6** Add theme persistence and user preferences (`rms-theme` localStorage via validated save/load; `THEME_BOOT_SCRIPT` inline in root layout stamps `data-theme` pre-paint — no FOUC; Appearance section on /account)
 
 ### Week 14: Feature Flags System
-- [ ] **14.1** Create feature flag database schema
-- [ ] **14.2** Implement feature flag API endpoints
-- [ ] **14.3** Create feature flag management UI
-- [ ] **14.4** Add feature flag middleware for route protection
-- [ ] **14.5** Implement client-specific feature configurations
-- [ ] **14.6** Add feature flag testing utilities
+- [x] **14.1** Create feature flag database schema (`FeatureFlag` name-unique global registry w/ `isEnabled` default + `metadata`; `Tenant.features` Json carries per-restaurant overrides — seed keys aligned to flag names (snake_case), `customer_reviews` flag added as the real integration gate)
+- [x] **14.2** Implement feature flag API endpoints (`/api/feature-flags` CRUD + `/config` GET/PATCH; permissions `feature-flag:read`/`feature-flag:manage` = MANAGER+; effective state = tenant override wins else global default)
+- [x] **14.3** Create feature flag management UI (`/dashboard/features` ADMIN/MANAGER + sidebar entry, flag 🎛️ — create form w/ slugified `[a-z0-9_]` key, global default toggle, per-tenant override select Default/On/Off, delete w/ confirm)
+- [x] **14.4** Add feature flag middleware for route protection (`attachFeatureFlags` → `req.featureFlags` + `requireFeature(name)` fail-closed 403 FEATURE_DISABLED; gates `POST /api/reviews` behind `customer_reviews`)
+- [x] **14.5** Implement client-specific feature configurations (PATCH `/config` merge semantics w/ null-clear; web `useFeaturesConfig()`/`useIsFeatureEnabled()` fail-closed; customer ReviewForm hidden when `customer_reviews` off)
+- [x] **14.6** Add feature flag testing utilities (api `feature-flag.spec` **22 tests** — evaluation service, CRUD/409s/404s, config merge+clear, middleware gates; web **11 tests** — service contract 6, lib helpers 2, features-page component 3)
 
 ### Week 15: Multi-Tenancy Implementation
 - [ ] **15.1** Implement tenant isolation at database level
