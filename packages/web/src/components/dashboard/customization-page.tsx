@@ -36,16 +36,25 @@ export default function CustomizationPage() {
   const updateTenant = useUpdateTenant();
 
   const [tab, setTab] = useState<TabId>('appearance');
-  const [draft, setDraft] = useState<TenantTheme>(EMPTY_DRAFT);
+  // null until the first saved document arrives — the draft then ADOPTS the
+  // published theme (Week 18 fix: a non-default published theme previously
+  // never reached the preview, so an admin could accidentally wipe branding).
+  const [draft, setDraft] = useState<TenantTheme | null>(null);
+  const [touched, setTouched] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const savedTheme: TenantTheme = tenant?.theme ?? EMPTY_DRAFT;
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(savedTheme), [draft, savedTheme]);
+  const activeDraft: TenantTheme = draft ?? savedTheme;
+  const dirty = useMemo(
+    () => JSON.stringify(activeDraft) !== JSON.stringify(savedTheme),
+    [activeDraft, savedTheme],
+  );
 
-  // Keep the draft aligned with the saved document unless the user is mid-edit.
+  // Keep the draft aligned with the saved document until the user starts
+  // editing (touched); after a publish/discard the clean draft re-syncs too.
   useEffect(() => {
-    if (!dirty) setDraft(savedTheme);
-  }, [dirty, savedTheme]);
+    if (!touched) setDraft(savedTheme);
+  }, [savedTheme, touched]);
 
   if (!hasRole('ADMIN')) {
     return (
@@ -58,13 +67,16 @@ export default function CustomizationPage() {
   const handlePublish = async () => {
     setPublishError(null);
     try {
-      await updateTenant.mutateAsync({ theme: draft });
+      await updateTenant.mutateAsync({ theme: activeDraft });
     } catch (err) {
       setPublishError(getApiErrorMessage(err));
     }
   };
 
-  const setDraftFrom = (patch: Partial<TenantTheme>) => setDraft((d) => ({ ...d, ...patch }));
+  const setDraftFrom = (patch: Partial<TenantTheme>) => {
+    setTouched(true);
+    setDraft((d) => ({ ...(d ?? EMPTY_DRAFT), ...patch }));
+  };
 
   return (
     <div className="space-y-6">
@@ -83,6 +95,7 @@ export default function CustomizationPage() {
             variant="outline"
             size="sm"
             onClick={() => {
+              setTouched(false);
               setDraft(savedTheme);
               setPublishError(null);
             }}
@@ -148,7 +161,7 @@ export default function CustomizationPage() {
                     Default palette &amp; appearance for your restaurant.
                   </p>
                   <div className="mt-4">
-                    <ThemeEditor draft={draft} onChange={setDraftFrom} />
+                    <ThemeEditor draft={activeDraft} onChange={setDraftFrom} />
                   </div>
                 </Card>
               )}
@@ -157,7 +170,7 @@ export default function CustomizationPage() {
                   <h2 className="font-semibold">Branding</h2>
                   <p className="mt-1 text-sm text-content-muted">Logo &amp; typography for your storefront.</p>
                   <div className="mt-4">
-                    <BrandingEditor draft={draft} onChange={setDraftFrom} />
+                    <BrandingEditor draft={activeDraft} onChange={setDraftFrom} />
                   </div>
                 </Card>
               )}
@@ -190,7 +203,7 @@ export default function CustomizationPage() {
         </div>
 
         <div className="lg:sticky lg:top-20">
-          <ThemePreviewCard draft={draft} restaurantName={tenant?.name ?? 'Your restaurant'} />
+          <ThemePreviewCard draft={activeDraft} restaurantName={tenant?.name ?? 'Your restaurant'} />
         </div>
       </div>
     </div>
