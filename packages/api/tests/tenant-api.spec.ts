@@ -347,4 +347,85 @@ describe('tenant branding & theme (Week 17)', () => {
     expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
     expect(prisma.tenant.update).not.toHaveBeenCalled();
   });
+
+  /* ──────────────────────────────────────────────────────────────
+     Comprehensive customization feature tests (Week 18.1)
+     ────────────────────────────────────────────────────────────── */
+
+  describe('tenant branding & theme – extended validation (Week 18.1)', () => {
+    const { updateMyTenant } = require('../src/controllers/tenant.controller');
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('persists all four theme presets (classic, emerald, sunset, custom)', async () => {
+      (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+      for (const preset of ['classic', 'emerald', 'sunset', 'custom'] as const) {
+        const theme = {
+          preset,
+          mode: 'dark',
+          custom: { primary: '#6366F1', secondary: '#EC4899' },
+          branding: { logoUrl: `https://cdn.example.com/logo-${preset}.png`, fontFamily: 'georgia' },
+        };
+        (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ theme }));
+        const { res } = await run(updateMyTenant, { ...tenantReq(), body: { theme } });
+        expect(prisma.tenant.update).toHaveBeenCalledWith({ where: { id: 'tenant-1' }, data: { theme } });
+        expect(bodyOf(res).data).toMatchObject({ theme });
+      }
+    });
+
+    it('persists all three color modes (light, dark, system)', async () => {
+      (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+      for (const mode of ['light', 'dark', 'system'] as const) {
+        const theme = {
+          preset: 'emerald',
+          mode,
+          custom: { primary: '#10B981', secondary: '#F59E0B' },
+          branding: { logoUrl: 'https://cdn.example.com/logo-emerald.png', fontFamily: 'trebuchet' },
+        };
+        (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ theme }));
+        const { res } = await run(updateMyTenant, { ...tenantReq(), body: { theme } });
+        expect(prisma.tenant.update).toHaveBeenCalledWith({ where: { id: 'tenant-1' }, data: { theme } });
+        expect(bodyOf(res).data).toMatchObject({ theme: { preset: 'emerald', mode } });
+      }
+    });
+
+    it('accepts a branding-less theme document', async () => {
+      (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+      const theme = { preset: 'classic', mode: 'light' };
+      (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ theme }));
+
+      const { res } = await run(updateMyTenant, { ...tenantReq(), body: { theme } });
+      expect(prisma.tenant.update).toHaveBeenCalledWith({ where: { id: 'tenant-1' }, data: { theme } });
+      expect(bodyOf(res).data).toMatchObject({ theme });
+    });
+
+    it('rejects a malformed theme document (missing required preset/mode)', async () => {
+      (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+
+      const { next } = await run(updateMyTenant, { ...tenantReq(), body: { theme: {} } });
+      expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });
+      expect(prisma.tenant.update).not.toHaveBeenCalled();
+    });
+
+    it('persists operatingHours config alongside the theme document', async () => {
+      (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow());
+      const operatingHours = { monday: { open: '08:00', close: '22:00' } };
+      const theme = {
+        preset: 'custom',
+        mode: 'system',
+        branding: { logoUrl: 'https://cdn.example.com/logo.png', fontFamily: 'inter' },
+      };
+      (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ operatingHours, theme }));
+
+      const { res } = await run(updateMyTenant, { ...tenantReq(), body: { operatingHours, theme } });
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant-1' },
+        data: { operatingHours, theme },
+      });
+      expect(bodyOf(res).data).toMatchObject({ operatingHours, theme });
+    });
+  });
+
 });
