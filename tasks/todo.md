@@ -1,42 +1,41 @@
-# Week 17 — Customization UI & Admin Dashboard (17.1–17.6)
+# Week 18 — Testing & Documentation (18.1–18.6)
 
 ## Context
-- Tracker 90/144 (Weeks 1–11, 13–16 done; 12 skipped per user). Next: Week 17 Customization UI & Admin Dashboard.
-- Already shipped in earlier weeks (ticks 17.3/17.4 are consolidation, not rebuild): feature-flag config UI (Week 14 `/dashboard/features`), tenant management UI (Week 15 `/dashboard/tenants`).
-- Gap: theme engine (Week 13) is per-user localStorage only; `Tenant.theme Json?` exists but is unused end-to-end. Week 17 makes branding tenant-level, persisted, previewable.
+- Tracker 96/144 (Weeks 1–11, 13–17 done; 12 skipped per user). Next: Week 18 Testing & Documentation.
+- Customization features shipped Weeks 13/17 (theme engine, console). Week 18 hardens them with tests and documents the platform.
 
 ## Plan
-### API
-- [ ] validation.ts: `tenantThemeSchema` (preset classic|emerald|sunset|custom, mode light|dark|system, custom primary/secondary 6-digit hex, branding.logoUrl https URI ≤500, branding.fontFamily inter|georgia|trebuchet|mono, whole object allow(null)); add `theme` to `updateTenantSchema`
-- [ ] tenant.controller `updateMyTenant`: accept `theme`; map JSON `null` (theme + operatingHours) to `Prisma.DbNull` (raw null throws on real Prisma Json? columns)
-- [ ] Tests: tenant-api.spec Week 17 block — persists valid theme, rejects bad hex / non-https logo (400), theme null → DbNull
+### API (18.1 / 18.2)
+- [x] tenant-api.spec extended: all 4 presets × persistence, all 3 modes, branding-less theme accepted, malformed theme (missing preset/mode) → 400, operatingHours+theme combo
+- [x] multi-tenant.integration.spec: supertest over the real `src/index` app (only `services/database` mocked) — health, 401 unauth, list scoped to caller tenant, create inherits tenantId, X-Tenant-ID mismatch → 403 TENANT_MISMATCH, cross-tenant row → 404, CUSTOMER blocked (role gate), per-user deny override → 403 FORBIDDEN_PERMISSION, feature-flag fail-closed → 403 FEATURE_DISABLED
+- [x] devDep: supertest + @types/supertest
 
-### Web
-- [ ] lib/theme.ts: `FONT_OPTIONS` catalog + `TenantFontId`; `ThemePrefs.font?`; `buildCssVariables` emits `--font-family-sans`; `isValidThemePrefs` accepts font; `tenantThemeToPrefs()` mapper
-- [ ] types/tenant.ts: `TenantTheme`/`TenantBranding` (reuse domain unions per L018); `TenantProfile.theme?`; `TenantUpdatePayload.theme?`
-- [ ] theme-provider: track prefs `source` (defaults/local/tenant — only local persists); signed-in fallback applies `tenant.theme` when no local prefs (user prefs always win)
-- [ ] 17.1 `/dashboard/customize` ADMIN console: tabbed layout (Appearance | Branding | Features & Settings), sidebar 🎨 (ADMIN) + dashboard-index quick link
-- [ ] 17.2 theme-editor (presets, custom colors, default mode) → draft → Publish `PATCH /tenants/me { theme }`
-- [ ] 17.5 branding-editor (logo URL w/ preview, font select) into `theme.branding`
-- [ ] 17.6 theme-preview-card: scoped mini-storefront rendered from draft CSS vars + font (live, pre-publish)
-- [ ] 17.3/17.4 links tab → cross-links to /dashboard/features + /dashboard/tenants
-- [ ] header.tsx: render tenant logo when `theme.branding.logoUrl` set (dashboard shell)
-- [ ] Tests: theme.spec font/tenantThemeToPrefs additions; customization-page.spec; tenant-theme provider fallback spec
+### Web (18.1 / 18.3)
+- [x] theme-preview-card.spec: scoped vars (classic/custom+dark anchors, font var, logo vs emoji fallback, invalid-draft default fallback, :root isolation)
+- [x] branding-editor.spec: font catalog, font drafting, logo preview chip, clear → null
+- [x] customization-workflow.spec (e2e, real ThemeProvider + CustomizationPage): published emerald applies app-wide → draft sunset updates scoped preview only → publish PATCHes tenant theme → refetch re-syncs console → discard reverts
+- [x] FIX (found by 18.3): customization-page draft never adopted a non-default published theme (sync effect gated on `!dirty`); draft now starts null and adopts saved until touched — prevents accidental branding wipe
+
+### Docs (18.4 / 18.5 / 18.6)
+- [x] docs/api/openapi.yaml (OpenAPI 3.0.3, 52 paths, 15 schemas, security schemes, error envelope) + docs/api/README.md conventions
+- [x] docs/admin/README.md (admin feature guide + role matrix)
+- [x] docs/deployment/README.md (compose, migrations, env, CI, prod notes, rollout checklist)
 
 ## Verification
-- [ ] API: tsc 0, eslint clean-ish, jest green (+new)
-- [ ] Web: tsc 0, jest green (+new), eslint, `next build` exit 0
-- [ ] Tracker ticks 17.1–17.6 (96/144); todo close-out; commits api → web → bookkeeping; memory termination push
+- [x] API: tsc 0 · eslint exit 0 (pre-existing no-var-requires pattern only) · jest 228 green (+14: +5 unit, +9 integration)
+- [x] Web: tsc 0 · `next build` exit 0 (customize route compiled) · next lint 0 errors · jest 123 green (+11)
+- [x] openapi.yaml `yaml.safe_load` valid (52 paths / 15 schemas)
+- [x] Tracker ticks 18.1–18.6 (102/144); lesson L020; commits api → web → docs → bookkeeping; memory termination push
 
 ## Notes
-- API PATCH /tenants/me stays MANAGER+ (Week 15 contract unchanged); the console UI is ADMIN-only per the Customization Engine spec ("only admins can change themes").
-- Tenant theme applies app-wide only to signed-in users (no public tenant-resolution endpoint for anonymous shoppers yet — documented limitation).
+- Integration tier needs no DB: jest mocks the prisma module; the tenant-scope data guard stays unit-tested in tenant-scope.spec (it lives inside the mocked module).
+- `redis.ts`/`mailer.ts` are currently unreferenced by src — no mocks needed for app boot.
+- `next build` prints a `patchIncorrectLockfile` TypeError while finalizing (env quirk: registry fetch + ENOWORKSPACES from its internal npm call); exit code is 0 and all routes compile — cosmetic.
+- Known documented limitation (unchanged): tenant theme applies app-wide only to signed-in users.
 
 ## Review
-- **Converged design:** tenant branding lives in the existing `Tenant.theme Json?` column (no new model), validated by a single `tenantThemeSchema` and surfaced through the self-service `PATCH /api/tenants/me` (Week 15 contract unchanged — still MANAGER+). The console UI is ADMIN-only per the Customization Engine spec.
-- **Three-way type sync:** `TenantTheme`/`TenantFontId` live in `lib/theme.ts` (the engine's domain), re-exported from `types/tenant.ts` for the API-contract mirror, and mirrored by the server `tenantThemeSchema` union — documented at each site.
-- **Preview isolation:** the live storefront preview renders inside a scoped container whose CSS vars are inherited, so drafting never touches `:root` (no flash to the rest of the dashboard).
-- **Persistence semantics:** provider tracks prefs `source` (defaults/local/tenant); only explicit user choices persist to localStorage, so a later tenant rebrand still reaches users who never customized, and anonymous visitors never trigger a tenant fetch.
-- **Latent fix:** `updateMyTenant` now maps JSON `null` to `Prisma.DbNull` for both `theme` and `operatingHours` (raw `null` throws on real Prisma `Json?` columns — the operatingHours path shipped in Week 15 was silently broken for the clear case).
-- **Verification:** api tsc 0 / 214 green (+5) · web tsc 0 / eslint 0 / 112 green (+~16) · `next build` exit 0, `/dashboard/customize` 9.88 kB, 24 routes.
-- **Commit split:** api `b164fa6` → web `1e08f9f` → bookkeeping (tracker 96/144, todo).
+- **Converged design:** Week 18 added the missing test tiers without new infra — unit (extended tenant-api + component specs), integration (supertest over the real express app with only the prisma module mocked), and component-level e2e (real ThemeProvider + CustomizationPage, services mocked).
+- **Real bug caught by 18.3:** the customization console's draft never adopted a published non-default theme (permanently "dirty" from first render → Discard/Publish could wipe branding). Fixed via null-initial draft + `touched` flag; regression-covered by the workflow spec. Lesson L020.
+- **Docs are generated-from-routes:** openapi.yaml mirrors every `src/routes/*.routes.ts` path (52) with shared schemas; admin/deployment guides cover the shipped feature set through Week 18.
+- **Verification:** api tsc 0 / 228 green · web tsc 0 / 123 green / next build exit 0 · yaml valid.
+- **Commit split:** api `test/integration` → web `fix+test` → docs → bookkeeping (tracker 102/144, L020, todo).

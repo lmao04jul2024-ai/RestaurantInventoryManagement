@@ -136,3 +136,14 @@
 - **Root cause:** an editor replacement anchored on the file's *head* naturally leaves everything after the anchor untouched. A "rewrite" that isn't a whole-file write is a splice, and splices need an explicit cut point.
 - **Fix / rule:** when replacing an entire test suite (or any file) mid-flight, either (a) rewrite the whole file in one deterministic pass (`cat > file <<'EOF'`), or (b) after the head swap, truncate the stale remainder at the seam (`sed -i '' '<line>,$d'`) and anchor-append the rest — then always check `tail`/`wc -l` before running tests. Companion UI-test rule: visible label text (`Role` in a filter bar) collides with `getByLabelText` for form controls elsewhere — give editor selects distinct aria-labels (e.g. "New staff role") and assert on those.
 
+## L020 — E2E tests earn their keep: they caught a draft-adoption bug the unit tests structurally could not
+- **Date:** 2026-09-04 (Week 18)
+- **Symptom:** the new customization workflow e2e test failed at "the preview shows the published emerald theme" — the console preview stayed classic even though `:root` was emerald. Existing unit tests passed because every one of them used a tenant whose theme equalled the `EMPTY_DRAFT` default (classic/system), so the bug was invisible.
+- **Root cause (real product bug):** `CustomizationPage` initialized its draft to `EMPTY_DRAFT` and its sync effect ran only `if (!dirty)` — with a published non-default theme the draft was permanently "dirty" from first render, so it never adopted the saved document. An admin opening the console would see classic branding, and Discard/Publish could silently wipe the restaurant's real branding.
+- **Fix:** draft state starts `null` and adopts `savedTheme` until `touched` becomes true; `activeDraft = draft ?? savedTheme` drives editors/preview/publish; Discard also resets `touched`.
+- **Rules going forward:**
+  1. Seed e2e/workflow fixtures with **non-default** published state — a fixture that equals the component's initial state masks initialization bugs by construction.
+  2. When a test mocks a service whose consumer is react-query, return **fresh objects per call** (like a real API). Returning one mutated shared reference trips `replaceEqualDeep`'s `a === b` early-exit and the cache never appears to update — a mock artifact, not a product bug.
+  3. supertest-over-`src/index` (mocking only `services/database`) is the cheap integration tier: it exercises JWT → resolveTenant → RBAC/feature-flag → controller for ~9 scenarios with no new infra beyond the `supertest` devDep. `redis.ts`/`mailer.ts` are unreferenced by src, so they need no mock.
+  4. The editor `insert_line` append path can silently relocate trailing lines when the anchor lands mid-block (the OpenAPI logout `204` jumped to EOF). For doc/YAML assembly, prefer `cat > file <<'EOF'` heredocs in one pass, and always `yaml.safe_load` the result before committing.
+

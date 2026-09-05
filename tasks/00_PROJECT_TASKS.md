@@ -146,13 +146,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **17.5** Implement branding customization (logo, colors, fonts)
 - [x] **17.6** Add customization preview functionality
 
-### Week 18: Testing & Documentation
-- [ ] **18.1** Write comprehensive unit tests for customization features
-- [ ] **18.2** Create integration tests for multi-tenant scenarios
-- [ ] **18.3** Write end-to-end tests for customization workflows
-- [ ] **18.4** Create API documentation with Swagger/OpenAPI
-- [ ] **18.5** Write user documentation for admin features
-- [ ] **18.6** Create deployment documentation
+### Week 18: Testing & Documentation ✅ *completed*
+- [x] **18.1** Write comprehensive unit tests for customization features (api tenant-api.spec +5: presets/modes matrix, branding-less theme, malformed-theme reject, config+theme combo; web theme-preview-card +5, branding-editor +4)
+- [x] **18.2** Create integration tests for multi-tenant scenarios (multi-tenant.integration.spec: supertest over the real express app — isolation, X-Tenant-ID mismatch 403, cross-tenant 404, RBAC/override gates, feature-flag fail-closed; supertest added as api devDep)
+- [x] **18.3** Write end-to-end tests for customization workflows (customization-workflow.spec: provider↔console e2e — published branding applies, scoped draft, publish+refetch re-sync, discard) — surfaced & fixed the draft-adoption bug in customization-page
+- [x] **18.4** Create API documentation with Swagger/OpenAPI (docs/api/openapi.yaml — OpenAPI 3.0.3, 52 paths / 15 schemas mirroring every route; docs/api/README.md conventions guide)
+- [x] **18.5** Write user documentation for admin features (docs/admin/README.md — menus/inventory/orders/POs/reviews/staff/flags/tenant/customize/audit + role matrix)
+- [x] **18.6** Create deployment documentation (docs/deployment/README.md — compose, migrations, env, CI, prod notes, rollout checklist)
 
 ## ⚡ Phase 4: Advanced Features & Optimization (Weeks 19-24)
 
