@@ -16,6 +16,7 @@ import featureFlagRoutes from './routes/feature-flag.routes';
 import tenantRoutes from './routes/tenant.routes';
 import staffRoutes from './routes/staff.routes';
 import auditLogRoutes from './routes/audit.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 dotenv.config();
 
@@ -69,6 +70,7 @@ app.use('/api/feature-flags', featureFlagRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);

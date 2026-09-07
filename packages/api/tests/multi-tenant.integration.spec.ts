@@ -17,6 +17,7 @@ jest.mock('../src/services/database', () => ({
     user: { findUnique: jest.fn() },
     featureFlag: { findMany: jest.fn() },
     supplier: { findFirst: jest.fn() },
+    reportTemplate: { findMany: jest.fn() },
     inventoryItem: {
       findMany: jest.fn(),
       count: jest.fn(),
@@ -173,6 +174,15 @@ describe('multi-tenant integration (18.2) — authorization boundaries', () => {
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FEATURE_DISABLED');
+  });
+
+  it('keeps analytics a management surface (SERVER lacks analytics:read, Week 19)', async () => {
+    const res = await request(app)
+      .get('/api/analytics/sales')
+      .set('Authorization', `Bearer ${serverA}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN_PERMISSION');
   });
 });
 });

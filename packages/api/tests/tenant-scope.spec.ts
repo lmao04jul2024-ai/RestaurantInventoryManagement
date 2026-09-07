@@ -64,6 +64,7 @@ describe('tenant-scope guard — untouched paths', () => {
       'Menu',
       'Order',
       'PurchaseOrder',
+      'ReportTemplate',
       'Review',
       'Supplier',
       'Table',

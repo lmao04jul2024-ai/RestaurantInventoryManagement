@@ -23,6 +23,7 @@ export const TENANT_SCOPED_MODELS = new Set([
   'InventoryTransaction',
   'Supplier',
   'PurchaseOrder',
+  'ReportTemplate',
 ]);
 
 /** Where-bearing operations that accept an injectable `where`. */

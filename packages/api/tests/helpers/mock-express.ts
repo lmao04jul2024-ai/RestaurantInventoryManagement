@@ -7,13 +7,16 @@ import { NextFunction, Request, Response } from 'express';
 export interface MockRes extends Omit<Response, 'statusCode'> {
   statusCode?: number;
   body?: unknown;
+  /** Captured setHeader/writeHead calls for export & SSE assertions. */
+  headers: Record<string, string>;
 }
 
 export function createRes(): MockRes {
   const res = {
     statusCode: undefined as number | undefined,
     body: undefined as unknown,
-  } as MockRes;
+    headers: {} as Record<string, string>,
+  } as MockRes & { headers: Record<string, string> };
 
   res.status = jest.fn((code: number) => {
     res.statusCode = code;
@@ -24,6 +27,23 @@ export function createRes(): MockRes {
     res.body = payload;
     return res;
   }) as unknown as MockRes['json'];
+
+  // Week 19 — export/stream flows need header + raw-body doubles.
+  res.setHeader = jest.fn((name: string, value: string) => {
+    res.headers[name] = value;
+    return res;
+  }) as unknown as MockRes['setHeader'];
+  res.send = jest.fn((payload: unknown) => {
+    res.body = payload;
+    return res;
+  }) as unknown as MockRes['send'];
+  res.end = jest.fn(() => res) as unknown as MockRes['end'];
+  res.writeHead = jest.fn((code: number, headers?: Record<string, string>) => {
+    res.statusCode = code;
+    Object.assign(res.headers, headers ?? {});
+    return res;
+  }) as unknown as MockRes['writeHead'];
+  res.write = jest.fn(() => true) as unknown as MockRes['write'];
 
   return res;
 }

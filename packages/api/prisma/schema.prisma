@@ -87,7 +87,8 @@ model Tenant {
   inventory   InventoryItem[]
   suppliers   Supplier[]
   purchaseOrders PurchaseOrder[]
-  
+  reportTemplates ReportTemplate[]
+
   @@index([slug])
 }
 
@@ -369,12 +370,30 @@ model InventoryTransaction {
   performedBy     String?  // user id or name
   tenantId        String
   createdAt       DateTime @default(now())
-  
+
   item            InventoryItem @relation(fields: [itemId], references: [id])
-  
+
   @@index([itemId])
   @@index([tenantId])
   @@index([createdAt])
+}
+
+// Week 19.6 — saved report configurations ("templates") per tenant: which
+// report to run and with which window/section options. Name is unique per
+// tenant; the whole row is tenant-scoped (see services/tenant-scope.ts).
+model ReportTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // sales | inventory | customers
+  config    Json     @default("{}") // e.g. { "days": 30, "sections": ["revenue"] }
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
 }
 
 model Supplier {

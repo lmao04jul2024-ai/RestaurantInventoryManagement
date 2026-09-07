@@ -561,3 +561,36 @@ export const staffListQuerySchema = Joi.object({
   role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER', 'CUSTOMER'),
   q: Joi.string().trim().max(100),
 });
+
+// ── Analytics & reporting schemas (Week 19) ──────────────────────────────────
+
+export const analyticsQuerySchema = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+});
+
+/** Week 19.4 — export a report as CSV (Excel) or PDF. */
+export const analyticsExportQuerySchema = Joi.object({
+  type: Joi.string().valid('sales', 'inventory', 'customers').required(),
+  format: Joi.string().valid('csv', 'pdf').default('csv'),
+  days: Joi.number().integer().min(1).max(365).default(30),
+});
+
+/** Week 19.6 — saved report configuration ("template"). */
+export const reportTemplateConfigSchema = Joi.object({
+  days: Joi.number().integer().min(1).max(365).default(30),
+  sections: Joi.array().items(Joi.string().trim().min(1).max(60)).max(12),
+});
+
+export const reportTemplateCreateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(120).required(),
+  type: Joi.string().valid('sales', 'inventory', 'customers').required(),
+  config: reportTemplateConfigSchema.default({ days: 30 }),
+});
+
+/** Update allows any subset; config is NOT defaulted here so a bare rename
+ *  never silently re-stamps { days: 30 } over the tenant's saved window. */
+export const reportTemplateUpdateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(120),
+  type: Joi.string().valid('sales', 'inventory', 'customers'),
+  config: reportTemplateConfigSchema.optional(),
+}).min(1);
