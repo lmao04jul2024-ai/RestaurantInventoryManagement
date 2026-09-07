@@ -35,6 +35,12 @@ const NAV: SidebarSection[] = [
         roles: ['ADMIN', 'MANAGER', 'SERVER'],
       },
       {
+        label: 'Analytics',
+        href: '/dashboard/analytics',
+        icon: '📈',
+        roles: ['ADMIN', 'MANAGER'],
+      },
+      {
         label: 'Reviews',
         href: '/dashboard/reviews',
         icon: '⭐',
