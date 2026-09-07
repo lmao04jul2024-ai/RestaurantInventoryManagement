@@ -63,7 +63,22 @@ sidebar shows only the tools your role can open.
 - See plan, subscription status, seat usage and analytics, and change billing
   plan tier.
 
-## 10. Customize (ADMIN only)
+## 10. Analytics (ADMIN/MANAGER)
+
+- **Sales**: orders, paid revenue and average order value over a 7/30/90-day
+  window, a daily revenue chart, status breakdown, top items and peak hours.
+- **Inventory**: stock valuation (cost & retail), low-stock list, dead stock
+  (items with zero usage in the window), top movers and per-supplier value.
+- **Customers**: new vs returning mix, repeat rate, average orders per
+  customer, top customers by spend and average review rating.
+- **Exports**: every report downloads as **CSV** (opens directly in Excel) or
+  **PDF** for the selected window.
+- **Templates**: save the current window as a named report template and reuse
+  it later (delete anytime). Templates are per-restaurant.
+- **Live metrics**: the API also streams today's revenue/orders/active orders
+  over Server-Sent Events (`/api/analytics/stream`) for real-time dashboards.
+
+## 11. Customize (ADMIN only)
 
 - **Appearance**: pick a preset palette (Classic/Emerald/Sunset/Custom),
   custom brand hexes, and light/dark/system default mode.
@@ -74,7 +89,7 @@ sidebar shows only the tools your role can open.
 - **Publish** to persist the theme tenant-wide. Publishing updates every
   signed-in visitor who hasn't set a personal override.
 
-## 11. Audit log (ADMIN only)
+## 12. Audit log (ADMIN only)
 
 - Read-only, filterable trail of staff actions (`action`, `targetType`,
   `targetId`, actor, timestamp). Rows are insert-only — nothing can be edited
@@ -89,6 +104,7 @@ sidebar shows only the tools your role can open.
 | Menus, suppliers, purchase   |    —     |  —    |   —     |   ✔️    |  ✔️  |
 | Staff & permission overrides |    —     |  —    |   —     |   ✔️    |  ✔️  |
 | Feature flags, tenant admin  |    —     |  —    |   —     |   ✔️    |  ✔️  |
+| Analytics & report exports   |    —     |  —    |   —     |   ✔️    |  ✔️  |
 | Customize (branding)         |    —     |  —    |   —     |   —     |  ✔️  |
 | Audit trail                  |    —     |  —    |   —     |   —     |  ✔️  |
 

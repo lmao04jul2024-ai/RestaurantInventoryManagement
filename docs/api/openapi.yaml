@@ -823,6 +823,132 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: Audit log page }
+  # ── Analytics & reporting (Week 19) ─────────────────────────────────────
+  /api/analytics/sales:
+    get:
+      tags: [Analytics]
+      summary: Sales analytics — revenue, daily histograms, top items, peak hours (analytics:read)
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: SalesReport
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/SalesReport" }
+  /api/analytics/inventory:
+    get:
+      tags: [Analytics]
+      summary: Inventory analytics — valuation, low/dead stock, movers, supplier split (analytics:read)
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: InventoryReport
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/InventoryReport" }
+  /api/analytics/customers:
+    get:
+      tags: [Analytics]
+      summary: Customer behavior — new/active/returning, repeat rate, top customers (analytics:read)
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: CustomerReport
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/CustomerReport" }
+  /api/analytics/export:
+    get:
+      tags: [Analytics]
+      summary: Export a report as CSV (Excel) or PDF (analytics:read)
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema: { type: string, enum: [sales, inventory, customers] }
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, pdf], default: csv }
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200":
+          description: Raw file (text/csv with UTF-8 BOM, or application/pdf)
+          content:
+            text/csv: {}
+            application/pdf: {}
+  /api/analytics/stream:
+    get:
+      tags: [Analytics]
+      summary: Live today-analytics over SSE (revenueToday, ordersToday, activeOrders)
+      responses:
+        "200":
+          description: text/event-stream of `analytics` events
+  /api/analytics/templates:
+    get:
+      tags: [Analytics]
+      summary: List saved report templates (analytics:read)
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReportTemplate" }
+    post:
+      tags: [Analytics]
+      summary: Save a report template (MANAGER+)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportTemplateInput" }
+      responses:
+        "201": { description: Created template }
+        "409": { description: A template with this name already exists }
+  /api/analytics/templates/{id}:
+    patch:
+      tags: [Analytics]
+      summary: Update a template (MANAGER+)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportTemplateInput" }
+      responses:
+        "200": { description: Updated template }
+        "404": { description: Not found in this tenant }
+    delete:
+      tags: [Analytics]
+      summary: Delete a template (MANAGER+)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204": { description: Deleted }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1046,6 +1172,139 @@ components:
             subscriptionStatus: { type: string }
             seatsUsed: { type: integer }
             seatsLimit: { type: integer }
+
+    SalesReport:
+      type: object
+      properties:
+        windowDays: { type: integer }
+        totals:
+          type: object
+          properties:
+            orders: { type: integer }
+            paidOrders: { type: integer }
+            paidRevenue: { type: number }
+            avgOrderValue: { type: number }
+        byStatus: { type: object, additionalProperties: { type: integer } }
+        revenueByDay:
+          type: array
+          items:
+            type: object
+            properties: { date: { type: string }, revenue: { type: number } }
+        ordersByDay:
+          type: array
+          items:
+            type: object
+            properties: { date: { type: string }, orders: { type: integer } }
+        topItems:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId: { type: string }
+              name: { type: string }
+              quantity: { type: integer }
+              revenue: { type: number }
+        peakHours:
+          type: array
+          items:
+            type: object
+            properties: { hour: { type: integer }, orders: { type: integer } }
+
+    InventoryReport:
+      type: object
+      properties:
+        windowDays: { type: integer }
+        totals:
+          type: object
+          properties:
+            items: { type: integer }
+            activeItems: { type: integer }
+            lowStock: { type: integer }
+            valuation: { type: number }
+            retailValue: { type: number }
+            deadStock: { type: integer }
+        lowStockItems:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              sku: { type: string }
+              currentStock: { type: number }
+              minStock: { type: number }
+              unit: { type: string }
+        deadStockItems:
+          type: array
+          items:
+            type: object
+            properties: { id: { type: string }, name: { type: string }, sku: { type: string }, currentStock: { type: number } }
+        topMovers:
+          type: array
+          items:
+            type: object
+            properties: { itemId: { type: string }, name: { type: string }, usage: { type: number } }
+        supplierBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              supplierId: { type: string }
+              name: { type: string }
+              items: { type: integer }
+              stockValue: { type: number }
+
+    CustomerReport:
+      type: object
+      properties:
+        windowDays: { type: integer }
+        totals:
+          type: object
+          properties:
+            customers: { type: integer }
+            newInWindow: { type: integer }
+            active: { type: integer }
+            returning: { type: integer }
+            repeatRatePct: { type: number }
+            avgOrdersPerCustomer: { type: number }
+        topCustomers:
+          type: array
+          items:
+            type: object
+            properties:
+              customerId: { type: string }
+              name: { type: string }
+              orders: { type: integer }
+              spend: { type: number }
+        avgRating: { type: number }
+        reviewCount: { type: integer }
+
+    ReportTemplate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        type: { type: string, enum: [sales, inventory, customers] }
+        config:
+          type: object
+          properties:
+            days: { type: integer, minimum: 1, maximum: 365 }
+            sections: { type: array, items: { type: string } }
+        tenantId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ReportTemplateInput:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        type: { type: string, enum: [sales, inventory, customers] }
+        config:
+          type: object
+          properties:
+            days: { type: integer, minimum: 1, maximum: 365, default: 30 }
+            sections: { type: array, items: { type: string } }
     InventoryCreateRequest:
       type: object
       required: [name, sku, minStock]

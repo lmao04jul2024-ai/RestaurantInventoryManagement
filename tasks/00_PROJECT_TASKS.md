@@ -156,13 +156,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 
 ## ⚡ Phase 4: Advanced Features & Optimization (Weeks 19-24)
 
-### Week 19: Analytics & Reporting
-- [ ] **19.1** Create sales analytics dashboard
-- [ ] **19.2** Implement inventory analytics
-- [ ] **19.3** Add customer behavior analytics
-- [ ] **19.4** Create reporting export functionality (PDF, Excel)
-- [ ] **19.5** Implement real-time analytics with WebSockets
-- [ ] **19.6** Add customizable report templates
+### Week 19: Analytics & Reporting ✅ *completed*
+- [x] **19.1** Create sales analytics dashboard (GET /api/analytics/sales — totals/byStatus/revenueByDay/ordersByDay/topItems/peakHours; web /dashboard/analytics Sales tab with KPI cards + SVG revenue chart + top items/status/peak-hour panels)
+- [x] **19.2** Implement inventory analytics (GET /api/analytics/inventory — valuation/retail value, low-stock list, dead stock (no USAGE in window), top movers, supplier breakdown; Inventory tab)
+- [x] **19.3** Add customer behavior analytics (GET /api/analytics/customers — new/active/returning, repeat rate, avg orders per customer, top customers by spend, review avg; Customers tab)
+- [x] **19.4** Create reporting export functionality (GET /api/analytics/export?type=&format=csv|pdf&days= — new dependency-free services/report-export.ts: RFC4180 CSV w/ UTF-8 BOM + minimal paginated PDF 1.4 writer with verified xref; blob download on web)
+- [x] **19.5** Implement real-time analytics with WebSockets (GET /api/analytics/stream — SSE live today-snapshot on connect + on each order event, reusing the tenant-keyed order-events pub/sub; SSE chosen over WS to match the existing stream transport, documented)
+- [x] **19.6** Add customizable report templates (Prisma ReportTemplate model, tenant-scoped CRUD /api/analytics/templates with name-unique-per-tenant 409s; web Reports tab save/apply/delete + export buttons)
 
 ### Week 20: Advanced Ordering Features
 - [ ] **20.1** Implement scheduled ordering
