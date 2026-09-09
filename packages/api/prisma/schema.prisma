@@ -44,6 +44,23 @@ enum InventoryUnit {
   BOX
 }
 
+enum GroupOrderStatus {
+  OPEN
+  CONVERTED
+  CANCELLED
+}
+
+enum PromoType {
+  PERCENT
+  FIXED
+}
+
+enum Recurrence {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 enum PurchaseOrderStatus {
   DRAFT
   SUBMITTED
@@ -88,6 +105,10 @@ model Tenant {
   suppliers   Supplier[]
   purchaseOrders PurchaseOrder[]
   reportTemplates ReportTemplate[]
+  groupOrders GroupOrder[]
+  loyaltyEntries LoyaltyEntry[]
+  promoCodes PromoCode[]
+  recurringOrders RecurringOrder[]
 
   @@index([slug])
 }
@@ -113,6 +134,10 @@ model User {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   orders      Order[]
   reviews     Review[]
+  hostedGroupOrders GroupOrder[] @relation("GroupOrderHost")
+  groupOrderItems GroupOrderItem[] @relation("GroupOrderItems")
+  loyaltyEntries LoyaltyEntry[] @relation("LoyaltyEntries")
+  recurringOrders RecurringOrder[] @relation("RecurringOrders")
   
   @@unique([email, tenantId])
   @@index([tenantId])
@@ -180,6 +205,7 @@ model MenuItem {
   orderItems      OrderItem[]
   pricingRules         MenuPricingRule[]
   availabilityWindows  MenuItemAvailabilityWindow[]
+  groupOrderItems GroupOrderItem[]
   
   @@index([categoryId])
   @@index([isAvailable])
@@ -254,6 +280,8 @@ model Order {
   discountAmount  Float      @default(0)
   tableNumber     String?
   specialRequests String?
+  // Week 20.1 — optional future fulfillment time (scheduled ordering).
+  scheduledFor    DateTime?
   customerId      String
   tenantId        String
   tableId         String?
@@ -274,6 +302,7 @@ model Order {
   @@index([tenantId, createdAt])
   @@index([status])
   @@index([createdAt])
+  @@index([tenantId, scheduledFor])
 }
 
 model OrderItem {
@@ -509,4 +538,104 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([tenantId, action])
   @@index([targetType, targetId])
+}
+
+// ── Week 20 — advanced ordering ──────────────────────────────────────────────
+
+// 20.2 — a shared cart a host opens; participants join by short code and add
+// lines; the host converts the group into one real order.
+model GroupOrder {
+  id             String          @id @default(uuid())
+  code           String
+  status         GroupOrderStatus @default(OPEN)
+  hostCustomerId String
+  tenantId       String
+  expiresAt      DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  host     User            @relation("GroupOrderHost", fields: [hostCustomerId], references: [id])
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  items    GroupOrderItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([hostCustomerId])
+}
+
+model GroupOrderItem {
+  id                 String   @id @default(uuid())
+  groupOrderId       String
+  participantId      String
+  menuItemId         String
+  quantity           Int
+  specialInstructions String?
+  createdAt          DateTime @default(now())
+
+  groupOrder GroupOrder @relation(fields: [groupOrderId], references: [id])
+  participant User      @relation("GroupOrderItems", fields: [participantId], references: [id])
+  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id])
+
+  @@index([groupOrderId])
+  @@index([participantId])
+}
+
+// 20.3 — loyalty points ledger. Balance = sum(points); accrual is positive
+// (1pt per $1 paid), redemption writes a negative entry tied to the order.
+model LoyaltyEntry {
+  id         String   @id @default(uuid())
+  customerId String
+  orderId    String?
+  points     Int
+  reason     String
+  tenantId   String
+  createdAt  DateTime @default(now())
+
+  customer User   @relation("LoyaltyEntries", fields: [customerId], references: [id])
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, customerId, createdAt])
+}
+
+// 20.4 — discount codes applied at order creation.
+model PromoCode {
+  id             String     @id @default(uuid())
+  code           String
+  type           PromoType
+  value          Float // PERCENT: 0..100, FIXED: currency amount
+  minSubtotal    Float?
+  maxRedemptions Int?
+  redeemedCount  Int        @default(0)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  isActive       Boolean    @default(true)
+  tenantId       String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isActive])
+}
+
+// 20.6 — subscription ordering: a saved basket that periodically spawns real
+// orders. `run-due` (MANAGER+) advances nextRunAt after each spawn.
+model RecurringOrder {
+  id          String   @id @default(uuid())
+  customerId  String
+  recurrence  Recurrence
+  items       Json // [{ menuItemId, quantity, specialInstructions? }]
+  nextRunAt   DateTime
+  lastRunAt   DateTime?
+  isActive    Boolean  @default(true)
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer User   @relation("RecurringOrders", fields: [customerId], references: [id])
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, isActive, nextRunAt])
+  @@index([customerId])
 }

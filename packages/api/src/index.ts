@@ -17,6 +17,11 @@ import tenantRoutes from './routes/tenant.routes';
 import staffRoutes from './routes/staff.routes';
 import auditLogRoutes from './routes/audit.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import groupOrderRoutes from './routes/group-orders.routes';
+import loyaltyRoutes from './routes/loyalty.routes';
+import promoRoutes from './routes/promo.routes';
+import recommendationRoutes from './routes/recommendations.routes';
+import recurringRoutes from './routes/recurring-orders.routes';
 
 dotenv.config();
 
@@ -71,6 +76,11 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/group-orders', groupOrderRoutes);
+app.use('/api/loyalty', loyaltyRoutes);
+app.use('/api/promo-codes', promoRoutes);
+app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/recurring-orders', recurringRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);

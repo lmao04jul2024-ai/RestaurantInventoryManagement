@@ -346,7 +346,87 @@ export const createOrderSchema = Joi.object({
   tableId: uuid.allow(null),
   specialRequests: Joi.string().trim().max(500).allow(null),
   items: Joi.array().items(orderLineSchema).min(1).max(50).required(),
+  // Week 20.1 — optional future fulfillment time (bounded at the controller).
+  scheduledFor: Joi.date().iso().greater('now').allow(null),
+  // Week 20.4 — promo code validated against the snapshotted subtotal.
+  promoCode: Joi.string().trim().max(32).allow(null),
+  // Week 20.3 — loyalty points to redeem (balance-checked server-side).
+  loyaltyPoints: Joi.number().integer().min(1).allow(null),
 });
+
+// ── Advanced ordering schemas (Week 20) ──────────────────────────────────────
+
+/** 20.2 — contribute lines to somebody else's group order. */
+export const groupOrderItemSchema = Joi.object({
+  menuItemId: uuid.required(),
+  quantity: Joi.number().integer().min(1).max(50).required(),
+  specialInstructions: Joi.string().trim().max(255).allow(null),
+});
+
+export const groupOrderCodeParamSchema = Joi.object({
+  code: Joi.string().trim().min(4).max(12).uppercase().required(),
+});
+
+/** 20.3 — loyalty redemption request shape (integer ≥ 1). */
+export const loyaltyRedeemSchema = Joi.object({
+  points: Joi.number().integer().min(1).required(),
+});
+
+/** 20.4 — promotional codes. Percent values are 0 < v ≤ 100. */
+export const promoTypeValues = ['PERCENT', 'FIXED'] as const;
+
+export const promoCodeCreateSchema = Joi.object({
+  code: Joi.string().trim().min(2).max(32).uppercase().required(),
+  type: Joi.string().valid(...promoTypeValues).required(),
+  value: Joi.number().positive().max(100).when('type', {
+    is: 'PERCENT',
+    then: Joi.number().positive().max(100),
+    otherwise: Joi.number().positive().max(1_000_000),
+  }).required(),
+  minSubtotal: Joi.number().min(0).allow(null),
+  maxRedemptions: Joi.number().integer().min(1).allow(null),
+  startsAt: Joi.date().iso().allow(null),
+  endsAt: Joi.date().iso().greater(Joi.ref('startsAt')).allow(null),
+  isActive: Joi.boolean(),
+});
+
+export const promoCodeUpdateSchema = Joi.object({
+  code: Joi.string().trim().min(2).max(32).uppercase(),
+  type: Joi.string().valid(...promoTypeValues),
+  value: Joi.number().positive().max(1_000_000),
+  minSubtotal: Joi.number().min(0).allow(null),
+  maxRedemptions: Joi.number().integer().min(1).allow(null),
+  startsAt: Joi.date().iso().allow(null),
+  endsAt: Joi.date().iso().allow(null),
+  isActive: Joi.boolean(),
+}).min(1);
+
+export const promoValidateSchema = Joi.object({
+  code: Joi.string().trim().min(2).max(32).required(),
+  subtotal: Joi.number().min(0).required(),
+});
+
+export const recurrenceValues = ['WEEKLY', 'BIWEEKLY', 'MONTHLY'] as const;
+
+const recurringItemSchema = Joi.object({
+  menuItemId: uuid.required(),
+  quantity: Joi.number().integer().min(1).max(20).required(),
+  specialInstructions: Joi.string().trim().max(255).allow(null),
+});
+
+/** 20.6 — subscription baskets. */
+export const recurringOrderCreateSchema = Joi.object({
+  items: Joi.array().items(recurringItemSchema).min(1).max(20).required(),
+  recurrence: Joi.string().valid(...recurrenceValues).required(),
+  startAt: Joi.date().iso().optional(),
+});
+
+export const recurringOrderUpdateSchema = Joi.object({
+  items: Joi.array().items(recurringItemSchema).min(1).max(20),
+  recurrence: Joi.string().valid(...recurrenceValues),
+  nextRunAt: Joi.date().iso().greater('now').allow(null),
+  isActive: Joi.boolean(),
+}).min(1);
 
 export const updateOrderSchema = Joi.object({
   specialRequests: Joi.string().trim().max(500).allow(null),

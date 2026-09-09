@@ -24,6 +24,11 @@ export const TENANT_SCOPED_MODELS = new Set([
   'Supplier',
   'PurchaseOrder',
   'ReportTemplate',
+  'GroupOrder',
+  'GroupOrderItem',
+  'LoyaltyEntry',
+  'PromoCode',
+  'RecurringOrder',
 ]);
 
 /** Where-bearing operations that accept an injectable `where`. */

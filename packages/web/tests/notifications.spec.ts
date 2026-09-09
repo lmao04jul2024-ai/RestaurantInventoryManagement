@@ -11,6 +11,7 @@ const order = (id: string, status: OrderStatus, orderNumber = `R-${id}`): Order 
   discountAmount: 0,
   tableNumber: null,
   specialRequests: null,
+  scheduledFor: null,
   customerId: 'c1',
   tenantId: 't1',
   tableId: null,

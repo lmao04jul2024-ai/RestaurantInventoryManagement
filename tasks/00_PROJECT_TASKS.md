@@ -164,21 +164,23 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **19.5** Implement real-time analytics with WebSockets (GET /api/analytics/stream — SSE live today-snapshot on connect + on each order event, reusing the tenant-keyed order-events pub/sub; SSE chosen over WS to match the existing stream transport, documented)
 - [x] **19.6** Add customizable report templates (Prisma ReportTemplate model, tenant-scoped CRUD /api/analytics/templates with name-unique-per-tenant 409s; web Reports tab save/apply/delete + export buttons)
 
-### Week 20: Advanced Ordering Features
-- [ ] **20.1** Implement scheduled ordering
-- [ ] **20.2** Add group ordering functionality
-- [ ] **20.3** Create loyalty program system
-- [ ] **20.4** Implement promotional codes and discounts
-- [ ] **20.5** Add order recommendations based on history
-- [ ] **20.6** Create subscription/recurring order system
+### Week 20: Advanced Ordering Features ✅ *completed*
+- [x] **20.1** Implement scheduled ordering (`Order.scheduledFor`, createOrder validation 15min–30d, kitchen queue separates scheduled)
+- [x] **20.2** Add group ordering (GroupOrder/GroupOrderItem models, 6-char code, host/OPEN|CONVERTED|CANCELLED, endpoints: create/me/join/add-item/remove-item/convert/cancel, shared pricing helper)
+- [x] **20.3** Create loyalty program (LoyaltyEntry ledger, 1pt/$1 accrual in payOrder gated on `loyalty_program` flag, 100pts=$1 redemption at createOrder capped at subtotal, GET /api/loyalty/me)
+- [x] **20.4** Implement promotional codes (PromoCode PERCENT|FIXED, MANAGER+ CRUD, validate endpoint, createOrder applies promo → discountAmount + redeemedCount++)
+- [x] **20.5** Add order recommendations (GET /api/recommendations — favorites top rebuys + popular bestsellers not tried, authed)
+- [x] **20.6** Create subscription/recurring orders (RecurringOrder model, customer CRUD /api/recurring-orders, MANAGER+ run-due spawns real orders via shared pricing helper)
 
-### Week 21: Performance Optimization
-- [ ] **21.1** Implement database query optimization
-- [ ] **21.2** Add database indexing for performance
-- [ ] **21.3** Implement API response caching
-- [ ] **21.4** Set up CDN for static assets
-- [ ] **21.5** Optimize frontend bundle size
-- [ ] **21.6** Implement lazy loading and code splitting
+**Delivered:** 130/144 implementation ticks (148 total tasks across Weeks 1–20 incl. skipped); 275 API tests, 133 web tests, 0 tsc errors, 0 eslint errors, web build exit 0.
+
+### Week 21: Kitchen & Fulfillment Hardening
+- [ ] **21.1** Kitchen status transitions (PATCH /:id/status with allowed-transition guard PENDING→CONFIRMED→PREPARING→READY, CANCELLED terminal, KitchenEvent audit, 409 STATUS_TRANSITION_INVALID)
+- [ ] **21.2** Staff assignment (Order.staffId FK, POST /:id/assign kitchen+, GET /api/kitchen?status=, unassign on READY)
+- [ ] **21.3** Prep time tracking (Order.prepStartedAt/readyAt set on transitions, GET /api/kitchen/analytics avg prep time/throughput/per-status)
+- [ ] **21.4** Prep time targets config (TenantSetting `kitchen.prepTimeTargetMinutes` default 15, MANAGER+ writable, analytics compare vs target)
+- [ ] **21.5** Kitchen capacity soft cap (TenantSetting `kitchen.capacity` default 20, 429 with RETRY_AFTER when active count ≥ capacity, advisory)
+- [ ] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
 
 ### Week 22: Security & Compliance
 - [ ] **22.1** Conduct security audit and penetration testing

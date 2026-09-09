@@ -19,7 +19,10 @@ const NEXT_ITEM_ACTION: Partial<Record<OrderStatus, { label: string; status: Ord
  */
 export default function KitchenBoard() {
   const { data, isLoading, isError, dataUpdatedAt } = useKitchenQueue();
-  const orders = data ?? [];
+  // Week 20.1 — the queue endpoint now splits live vs. scheduled-future tickets.
+  const orders = (data as Order[] | { live: Order[]; scheduled: Order[] } | undefined);
+  const live = Array.isArray(orders) ? orders : orders?.live ?? [];
+  const scheduled = Array.isArray(orders) ? [] : orders?.scheduled ?? [];
   const moveItem = useUpdateOrderItemStatus();
   const error = moveItem.error ? getApiErrorMessage(moveItem.error) : null;
 
@@ -45,14 +48,14 @@ export default function KitchenBoard() {
       {error && <Alert tone="error">{error}</Alert>}
       {isLoading && <p className="text-sm text-content-muted">Loading queue…</p>}
 
-      {!isLoading && orders.length === 0 && (
+      {!isLoading && live.length === 0 && (
         <Card>
           <p className="text-sm text-content-muted">All caught up — no orders in the queue. 🎉</p>
         </Card>
       )}
 
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {orders.map((order) => (
+        {live.map((order) => (
           <li key={order.id}>
             <Card className={ageMinutes(order.createdAt) >= 15 ? 'border-red-300' : undefined}>
               <div className="flex items-center justify-between gap-2">
@@ -105,6 +108,23 @@ export default function KitchenBoard() {
           </li>
         ))}
       </ul>
+
+      {scheduled.length > 0 && (
+        <Card>
+          <h3 className="font-semibold">Scheduled ahead</h3>
+          <ul className="mt-2 space-y-1">
+            {scheduled.map((order) => (
+              <li key={order.id} className="flex justify-between gap-2 text-sm">
+                <span className="font-mono text-xs text-content-muted">{order.orderNumber}</span>
+                <span className="text-content-muted">
+                  {order.scheduledFor ? new Date(order.scheduledFor).toLocaleString() : '—'} ·{' '}
+                  {(order.items ?? []).reduce((sum, i) => sum + i.quantity, 0)} items
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

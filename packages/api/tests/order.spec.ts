@@ -553,7 +553,21 @@ describe('kitchen queue & dashboard summary (9.3/9.6)', () => {
         orderBy: { createdAt: 'asc' },
       }),
     );
-    expect(bodyOf(res)).toEqual({ data: [] });
+    expect(bodyOf(res)).toEqual({ data: { live: [], scheduled: [] } });
+  });
+
+  it('splits scheduled-future tickets out of the live queue', async () => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    (prisma.order.findMany as jest.Mock).mockResolvedValue([
+      { id: 'o-live', scheduledFor: null },
+      { id: 'o-scheduled', scheduledFor: tomorrow },
+    ]);
+
+    const { res } = await run(kitchenQueue, tenantReq());
+
+    const data = bodyOf(res).data as { live: unknown[]; scheduled: unknown[] };
+    expect(data.live).toHaveLength(1);
+    expect(data.scheduled).toHaveLength(1);
   });
 
   it('aggregates status counts, paid revenue, and average order value', async () => {

@@ -2,6 +2,7 @@ import api from '@/lib/api';
 import { Pagination } from '@/types/menu';
 import type {
   CreateOrderPayload,
+  KitchenQueuePayload,
   KitchenSummary,
   Order,
   OrderItem,
@@ -64,8 +65,8 @@ export const orderService = {
     return data.data;
   },
 
-  async kitchenQueue(): Promise<Order[]> {
-    const { data } = await api.get<{ data: Order[] }>('/orders/kitchen/queue');
+  async kitchenQueue(): Promise<KitchenQueuePayload> {
+    const { data } = await api.get<{ data: KitchenQueuePayload }>('/orders/kitchen/queue');
     return data.data;
   },
 

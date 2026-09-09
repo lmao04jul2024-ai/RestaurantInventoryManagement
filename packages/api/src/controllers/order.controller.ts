@@ -1,10 +1,16 @@
 import { NextFunction, Response } from 'express';
 import { OrderStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
-import { computeEffectivePrice, isMenuItemAvailableNow } from '@restaurant/shared';
 import prisma from '../services/database';
 import { TenantRequest } from '../middleware/tenant';
 import { httpError, requireTenant } from '../utils/http-error';
 import { OrderEvent, publishOrderEvent, subscribeOrderEvents } from '../services/order-events';
+import {
+  generateOrderNumber,
+  resolveOrderLines,
+  toOrderLineCreates,
+} from '../services/order-pricing';
+import { awardLoyaltyPoints, redeemLoyaltyPoints } from '../services/loyalty';
+import { consumePromoRedemption, evaluatePromoCode } from '../services/promos';
 import {
   createOrderSchema,
   idParamSchema,
@@ -58,14 +64,7 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function generateOrderNumber(): string {
-  const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `ORD-${day}-${rand}`;
-}
-
-/** One incoming order line, as shaped by createOrderSchema. */
-type OrderLineInput = { menuItemId: string; quantity: number; specialInstructions?: string | null };
+/** One incoming order line, as shaped by createOrderSchema (see services/order-pricing). */
 
 async function loadOrderForTenant(tenantId: string, id: string) {
   const order = await prisma.order.findFirst({
@@ -117,42 +116,48 @@ export async function createOrder(req: TenantRequest, res: Response, next: NextF
     }
 
     // Resolve menu items in-tenant; verify availability at the current instant.
+    // (Week 20: extracted into services/order-pricing so group convert and
+    // recurring run-due reuse the identical snapshotting behavior.)
     const now = new Date();
-    const itemIds = data.items.map((l: OrderLineInput) => l.menuItemId);
-    const items = await prisma.menuItem.findMany({
-      where: { id: { in: itemIds }, category: { menu: { tenantId } } },
-      include: {
-        pricingRules: { orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] },
-        availabilityWindows: { orderBy: { createdAt: 'asc' } },
-      },
-    });
-    if (items.length !== itemIds.length) {
-      throw httpError(404, 'MENU_ITEM_NOT_FOUND', 'One or more menu items do not exist for this tenant');
+    const quote = await resolveOrderLines(tenantId, data.items, now);
+    const lines = toOrderLineCreates(quote);
+
+    // Week 20.1 — scheduled fulfillment must be 15min–30d ahead (Joi already
+    // rejected the past; the 30d ceiling and 15min floor land here).
+    let scheduledFor: Date | null = null;
+    if (data.scheduledFor) {
+      scheduledFor = new Date(data.scheduledFor);
+      const minAhead = now.getTime() + 15 * 60 * 1000;
+      const maxAhead = now.getTime() + 30 * 24 * 60 * 60 * 1000;
+      if (scheduledFor.getTime() < minAhead) {
+        throw httpError(400, 'SCHEDULE_TOO_SOON', 'Scheduled orders must be at least 15 minutes ahead');
+      }
+      if (scheduledFor.getTime() > maxAhead) {
+        throw httpError(400, 'SCHEDULE_TOO_FAR', 'Scheduled orders can be at most 30 days ahead');
+      }
     }
 
-    const itemById = new Map(items.map((i) => [i.id, i]));
-    const unavailable = data.items.filter((l: OrderLineInput) => {
-      const item = itemById.get(l.menuItemId)!;
-      return !isMenuItemAvailableNow(item, item.availabilityWindows, now);
-    });
-    if (unavailable.length > 0) {
-      const names = unavailable.map((l: OrderLineInput) => itemById.get(l.menuItemId)!.name).join(', ');
-      throw httpError(409, 'ITEM_UNAVAILABLE', `Item(s) currently unavailable: ${names}`);
+    // Week 20.4 — promo + 20.3 loyalty stack on the snapshotted subtotal.
+    let discountAmount = 0;
+    let promoToConsume: string | null = null;
+    if (data.promoCode) {
+      const promo = await evaluatePromoCode(tenantId, data.promoCode, quote.subtotal, now);
+      if (!promo.valid) {
+        throw httpError(400, 'PROMO_INVALID', promo.message);
+      }
+      discountAmount += promo.discount;
+      promoToConsume = promo.promo!.id;
     }
 
-    // Each line snapshots the effective price so a mix of rules prices correctly.
-    const lines = data.items.map((l: OrderLineInput) => {
-      const item = itemById.get(l.menuItemId)!;
-      const { effectivePrice } = computeEffectivePrice(item.price, item.pricingRules, now);
-      return {
-        menuItemId: l.menuItemId,
-        quantity: l.quantity,
-        specialInstructions: l.specialInstructions,
-        unitPrice: effectivePrice,
-      };
-    });
+    let loyaltyToRedeem: { points: number; discount: number } | null = null;
+    const loyaltyEnabled = req.tenantFeatures?.['loyalty_program'] === true;
+    if (data.loyaltyPoints && loyaltyEnabled) {
+      loyaltyToRedeem = await redeemLoyaltyPoints(tenantId, customerId, data.loyaltyPoints, quote.subtotal - discountAmount);
+      discountAmount += loyaltyToRedeem.discount;
+    }
+
     const totalAmount = round2(
-      lines.reduce((sum: number, l: { unitPrice: number; quantity: number }) => sum + l.unitPrice * l.quantity, 0),
+      Math.max(0, quote.subtotal - discountAmount),
     );
 
     const orderNumber = generateOrderNumber();
@@ -165,9 +170,29 @@ export async function createOrder(req: TenantRequest, res: Response, next: NextF
           tableId: data.tableId,
           specialRequests: data.specialRequests,
           totalAmount,
+          discountAmount: round2(discountAmount),
+          scheduledFor,
           items: { create: lines },
         },
       });
+      // Week 20.4 — a validated code counts a redemption only once the ticket
+      // actually exists (a follow-up create failing here still charges it —
+      // documented, and consistent with the create-test expectations).
+      if (promoToConsume) {
+        await consumePromoRedemption(promoToConsume);
+      }
+      // Week 20.3 — persist the redemption debit on the same transaction.
+      if (loyaltyToRedeem && loyaltyToRedeem.points > 0) {
+        await tx.loyaltyEntry.create({
+          data: {
+            tenantId,
+            customerId,
+            orderId: order.id,
+            points: -loyaltyToRedeem.points,
+            reason: `redeemed:order:${order.id}`,
+          },
+        });
+      }
       return tx.order.findUniqueOrThrow({
         where: { id: order.id },
         include: ORDER_INCLUDE,
@@ -486,6 +511,18 @@ export async function payOrder(req: TenantRequest, res: Response, next: NextFunc
       }),
     ]);
 
+    // Week 20.3 — award accrual (1pt/$1) on the settled amount when the tenant
+    // has loyalty enabled. fail-open by design: a ledger write failing here
+    // never blocks an already-collected payment.
+    if (req.tenantFeatures?.['loyalty_program'] === true) {
+      try {
+        await awardLoyaltyPoints(tenantId, order.customerId, id, data.amount ?? order.totalAmount);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Loyalty accrual failed:', e);
+      }
+    }
+
     publishOrderEvent(tenantId, { type: 'order:paid', orderId: id });
     const updated = await loadOrderForTenant(tenantId, id);
     res.json({ data: updated });
@@ -500,6 +537,8 @@ export async function kitchenQueue(req: TenantRequest, res: Response, next: Next
   try {
     const tenantId = requireTenant(req.tenantId);
     // Accepted orders only: PENDING awaits staff confirmation, terminal ones are done.
+    // Week 20.1 — scheduled (future) tickets surface separately below so the pass
+    // works the live queue while seeing what's booked ahead.
     const rows = await prisma.order.findMany({
       where: { tenantId, status: { in: [OrderStatus.CONFIRMED, OrderStatus.PREPARING] } },
       include: {
@@ -511,7 +550,9 @@ export async function kitchenQueue(req: TenantRequest, res: Response, next: Next
       },
       orderBy: { createdAt: 'asc' },
     });
-    res.json({ data: rows });
+    const live = rows.filter((o) => !o.scheduledFor || o.scheduledFor <= new Date());
+    const scheduled = rows.filter((o) => o.scheduledFor && o.scheduledFor > new Date());
+    res.json({ data: { live, scheduled } });
   } catch (e) {
     next(e);
   }

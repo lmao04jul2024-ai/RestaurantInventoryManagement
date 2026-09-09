@@ -84,12 +84,14 @@ describe('orderService — Week 9 endpoint contract', () => {
   });
 
   it('fetches the kitchen queue from /orders/kitchen/queue', async () => {
-    apiGet.mockResolvedValue({ data: { data: [{ id: 'order-1', status: 'CONFIRMED' }] } });
+    apiGet.mockResolvedValue({
+      data: { data: { live: [{ id: 'order-1', status: 'CONFIRMED' }], scheduled: [] } },
+    });
 
     const queue = await orderService.kitchenQueue();
 
     expect(apiGet).toHaveBeenCalledWith('/orders/kitchen/queue');
-    expect(queue[0]).toMatchObject({ status: 'CONFIRMED' });
+    expect(queue).toMatchObject({ live: [{ status: 'CONFIRMED' }], scheduled: [] });
   });
 
   it('fetches the dashboard summary from /orders/report/summary', async () => {

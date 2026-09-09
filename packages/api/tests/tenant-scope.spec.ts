@@ -59,11 +59,16 @@ describe('tenant-scope guard — untouched paths', () => {
 
   it('exposes the intended tenant-owned model set', () => {
     expect([...TENANT_SCOPED_MODELS].sort()).toEqual([
+      'GroupOrder',
+      'GroupOrderItem',
       'InventoryItem',
       'InventoryTransaction',
+      'LoyaltyEntry',
       'Menu',
       'Order',
+      'PromoCode',
       'PurchaseOrder',
+      'RecurringOrder',
       'ReportTemplate',
       'Review',
       'Supplier',

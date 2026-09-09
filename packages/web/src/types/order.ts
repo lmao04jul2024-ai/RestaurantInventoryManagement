@@ -52,6 +52,8 @@ export interface Order {
   discountAmount: number;
   tableNumber: string | null;
   specialRequests: string | null;
+  /** Week 20.1 — future fulfillment time for scheduled orders (null = ASAP). */
+  scheduledFor: string | null;
   customerId: string;
   tenantId: string;
   tableId: string | null;
@@ -104,7 +106,14 @@ export interface CreateOrderPayload {
   tableId?: string | null;
   specialRequests?: string | null;
   items: OrderLineInput[];
+  /** Week 20.1 — future fulfillment ISO time; Week 20.4 promo code; Week 20.3 loyalty points. */
+  scheduledFor?: string | null;
+  promoCode?: string | null;
+  loyaltyPoints?: number | null;
 }
+
+/** Split kitchen response: live queue + scheduled-future tickets (Week 20.1). */
+export type KitchenQueuePayload = Order[] | { live: Order[]; scheduled: Order[] };
 
 export interface OrderLineInput {
   menuItemId: string;
