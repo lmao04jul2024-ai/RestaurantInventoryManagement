@@ -1,55 +1,24 @@
-# Week 22 — Security & Compliance (22.1–22.6)
+# Week 23 — Documentation & Training Materials (23.1–23.6)
 
 ## Context
-- Tracker 119/144 (Weeks 1–20 done; 31 remaining/open across Weeks 2–24 incl. Week 12 skipped, Week 23–24 planned-ahead placeholders). Phase 5 continues.
-- Existing: Week 20 delivered scheduled/group/loyalty/promo/recs/recurring with tests; `kitchenQueue` SSE on WebSocket connection (single push transport); `Order.status` enum has PENDING/CONFIRMED/PREPARING/READY/CANCELLED; kitchen board consumes queue.
+- HEAD 78d6893 (Week 22 committed). Tracker 125/144; Week 23 adds 6 → 131/144.
+- Prior session left partial Week 23 work uncommitted + out-of-scope noise (Prisma ^7 bump, node:22 Dockerfile, web tsconfig excluding tests, deleted lockfile) — noise REVERTED at session start per L050.
+- Memory MCP had no Week 22 push (L001 recurrence) → log as L051, push Week 22+23 at close.
 
 ## Plan
-### API
-- [x] **21.1** Kitchen status transitions (PATCH /:id/status with allowed-transition guard PENDING→CONFIRMED→PREPARING→READY, CANCELLED terminal, KitchenEvent audit, 409 STATUS_TRANSITION_INVALID)
-- [x] **21.2** Staff assignment (Order.staffId FK, POST /:id/assign kitchen+, GET /api/kitchen?status=, unassign on READY)
-- [x] **21.3** Prep time tracking (Order.prepStartedAt/readyAt set on transitions, GET /api/kitchen/analytics avg prep time/throughput/per-status)
-- [x] **21.4** Prep time targets config (TenantSetting `kitchen.prepTimeTargetMinutes` default 15, MANAGER+ writable, analytics compare vs target)
-- [x] **21.5** Kitchen capacity soft cap (TenantSetting `kitchen.capacity` default 20, 429 with RETRY_AFTER when active count ≥ capacity, advisory)
-- [x] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
+- [x] Revert out-of-scope working-tree noise; remove prisma.config.ts + stray `grep` file
+- [x] 23.1 Fix docs/api/README.md factual errors (66 paths/26 schemas, /api/menus, /api/orders/kitchen*, GDPR=/api/me+/api/me/data, /api/audit-logs, suppliers row, drop VERSION_CONFLICT)
+- [x] 23.2 Fix docs/manuals: server.md §5 fictional offline sync → real behavior; kitchen.md unclosed backtick
+- [x] 23.3 Create docs/training/decks/{customer,server,kitchen,manager,admin}.md (slide-style, exercise per deck)
+- [x] 23.4 docs/deployment/OPERATIONS.md (monitoring/alerting/runbooks; link from README)
+- [x] 23.5 docs/troubleshooting/README.md
+- [x] 23.6 docs/onboarding/README.md (new-client onboarding)
+- [x] Tracker 23.1–23.6 → 131/144; lessons L051; todo update
+- [x] Verify: link-check all docs relative links, yaml.safe_load openapi, git status clean of noise
+- [x] Commits: docs commit → bookkeeping commit; Memory push (Week 22 retro + Week 23) + [MEMORY BANK: UPDATED]
 
-### Web
-- [x] **21.1** Kitchen status actions in kitchen board (status dropdown/button with allowed transitions only, feedback toast, optimistic re-render)
-- [x] **21.2** Staff assignment UI (assign/unassign buttons, staff dropdown from /api/staff, show assigned staff on card)
-- [x] **21.3** Prep time display (prepStartedAt → elapsed, readyAt when ready, color by target)
-- [x] **21.4** Prep time target config in tenant settings (MANAGER+ editable, default 15)
-- [x] **21.5** Capacity indicator (active count vs capacity, warning when near limit)
-- [x] **21.6** SSE field bindings (assignedStaff, prepElapsed, prepTargetMet re-render kitchen board)
-
-### Docs
-- [x] Update OpenAPI (new kitchen endpoints, status enum docs, staff assignment, prep-time fields)
-- [x] Update admin guide (kitchen workflows, staff assignment, prep time targets, capacity)
-
-## Status
-- Week 20 complete: all 6 deliverables + tests + docs committed. 294 API tests / 143 web tests green, 0 tsc errors, web build exit 0.
-- Week 21 complete: kitchen status audit + timeline (21.1), staff assignment + unassign (21.2), prep analytics (21.3), target+capacity settings API (21.4/21.5), enriched board (21.6). Fixed 2 latent web service URL bugs (/orders/kitchen, /orders/reports/summary). OPEN follow-ups: web settings-page UI for kitchen knobs (21.4 web) and order-level status buttons on the board (21.1 web) — API + board enrichment delivered.
-
-- [ ] 21.1 Kitchen status transitions: order.controller PATCH /:id/status bumps status with allowed-transition guard (PENDING→CONFIRMED→PREPARING→READY; CANCELLED terminal from PREPARED/CONFIRMED/PENDING), records KitchenEvent (status, actor customerId, note?), returns updated order; out-of-order → 409 STATUS_TRANSITION_INVALID
-- [ ] 21.2 Staff assignment: Order.staffId String? nullable FK to User; POST /:id/assign (kitchen+ sets staff, returns order); GET /api/kitchen?status= returns tenant orders filtered by status with assigned staff; unassign via status transition (READY clears staff)
-- [ ] 21.3 Prep time tracking: Order.prepStartedAt DateTime? set on PENDING→PREPARING transition; Order.readyAt DateTime? set on PREPARING→READY; GET /api/kitchen/analytics returns avg prep time (readyAt−prepStartedAt, orders completed in window), throughput (# orders/hour), per-status counts — same analytics service, new read
-- [ ] 21.4 Prep time targets config: new TenantSetting key `kitchen.prepTimeTargetMinutes` (number, default 15) — readable via GET /api/tenant/settings, writable by MANAGER+; analytics compare against target; no new model, reuse settings JSON
-- [ ] 21.5 Kitchen capacity soft cap: TenantSetting `kitchen.capacity` (number, default 20) — at order creation time, if active (PENDING|CONFIRMED|PREPARING) count ≥ capacity, return 429 with `RETRY_AFTER` header (seconds until next slot frees, estimated from avg prep time or default 10min); capacity is advisory (orders still accepted) but flagged; used by kitchen board to signal congestion
-- [ ] 21.6 Kitchen board SSE enrichment: kitchen queue SSE message includes `assignedStaff` (name+id if staffId set) and `prepElapsed` (seconds since prepStartedAt, null if not started) and `prepTargetMet` (boolean vs setting); board re-renders on these — single transport, no new endpoint
-
-### Web
-- [ ] types/order: status enum + KitchenEvent type; orders.service: status transition, assign, kitchen list/query, prep analytics; kitchen.service (SSE kitchen queue with enriched fields)
-- [ ] Kitchen board (/orders/kitchen): status transition buttons (allowed transitions only), staff assign dropdown (search users by name, MANAGER+KITCHEN+), prep time column (elapsed + target indicator), capacity gauge, filter by status — reuses kitchen queue SSE
-- [ ] Settings: kitchen section (prep time target, capacity) under /settings in existing settings page — MANAGER+ only
-- [ ] Tests: service specs (status transitions, assign, prep analytics, capacity) + kitchen board + settings page specs
-
-## Verification
-- [x] API: tsc 0, eslint 0 errors, new jest green + old still passing
-- [x] Web: tsc 0, jest green (+new), next build exit 0
-- [x] openapi.yaml + admin guide updated; tracker 21.1–21.6 (119/144); commits api → web → docs/bookkeeping; memory push
-
-## Notes
-- Status transitions are the source of truth for prep timing — no separate "start prep" action; starting prep IS the transition.
-- Staff assignment is advisory (no fulfillment handoff protocol yet) — drives board display and future labor analytics.
-- Capacity is a soft signal; hard backpressure (rejecting orders) is a Week 22+ hardening candidate with configurable policy.
-- All kitchen data is tenant-scoped via existing TENANT_SCOPED_MODELS + tenant middleware; no cross-tenant leakage.
-
+## Review (2026-09-10)
+- All 6 deliverables complete; noise reverted (Prisma 7/Docker/node22/tsconfig/lockfile); L051 logged.
+- Factual fixes: api guide 66/26 + real paths (/api/menus, /api/orders/kitchen*, /api/me(+data), /api/audit-logs, suppliers), removed nonexistent VERSION_CONFLICT; server manual offline-sync section rewritten; kitchen backtick; seed command.
+- Verified: 0 broken relative links in docs/, openapi yaml valid (66 paths/26 schemas), tracker 131/144, working tree = docs + bookkeeping only.
+- Commits: docs commit → bookkeeping commit; memory pushed (Week 22 retro + Week 23).

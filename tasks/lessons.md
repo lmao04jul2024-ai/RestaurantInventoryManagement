@@ -157,3 +157,10 @@
 
 ## L050 — Always verify against the repo, never trust session summaries (2026-09-09)
 A re-check request exposed that prior session summaries claimed Week 23 "Offline Mode & Sync" and Week 24 "System Hardening, 144/144 complete" — but the actual tracker shows Week 23 = Documentation & Training (0/6) and Week 24 = Production Launch (0/6), with 125/144 ticks total. Week 22 security work existed only as uncommitted working-tree changes. Rule: before reporting any week as complete, `grep` the tracker checkboxes, `git status`, and run the suites — then state the verified commit hash. Never present an uncommitted or unverified week as delivered.
+
+## L051 — Task Termination memory push skipped again (recurrence of L001)
+- **Date:** 2026-09-10 (Week 22 close)
+- **Symptom:** Rules system flagged CRITICAL FAULT: the Week 22 (Security & Compliance, commit 78d6893) session ended without updating Memory MCP — no week-22 entity, no roadmap-position/test-count/git-state snapshot.
+- **Contributing cause:** the session also left uncommitted, unverified working-tree noise (untested Prisma ^5→^7 bump + prisma.config.ts, node:22 Dockerfile, web tsconfig excluding tests/specs from tsc, deleted root package-lock.json, stray `grep` file) and partially-fictional docs — suggesting the session ended abruptly mid-verification.
+- **Rule:** the termination sequence (memory push → verify → `[MEMORY BANK: UPDATED]`) runs BEFORE the final message on every task, same as L001. If a session must end early, push an interim snapshot marking state as "in progress" rather than pushing nothing.
+- **Recovered:** L051 logged at Week 23 start; Week 22 snapshot pushed retroactively alongside the Week 23 close.

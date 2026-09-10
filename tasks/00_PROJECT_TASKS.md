@@ -190,13 +190,13 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **22.5** Add data backup and recovery procedures
 - [x] **22.6** Create security monitoring and alerting
 
-### Week 23: Documentation & Training Materials
-- [ ] **23.1** Create comprehensive API documentation
-- [ ] **23.2** Write user manuals for all user roles
-- [ ] **23.3** Create video tutorials and training materials
-- [ ] **23.4** Write deployment and operations guide
-- [ ] **23.5** Create troubleshooting guide
-- [ ] **23.6** Develop onboarding documentation for new clients
+### Week 23: Documentation & Training Materials ✅ *completed*
+- [x] **23.1** Create comprehensive API documentation (docs/api/README.md human-readable companion rewritten & fact-checked against openapi.yaml — 66 paths/26 schemas, auth, tenant isolation, envelopes, RBAC, error codes, rate limiting; spec stays the machine source of truth)
+- [x] **23.2** Write user manuals for all user roles (docs/manuals/{customer,server,kitchen,manager,admin}.md + README; server manual corrected — no offline-sync feature exists)
+- [x] **23.3** Create video tutorials and training materials (docs/training/ lesson plans + recording checklist; slide-style narration decks per role in docs/training/decks/ — decks double as video scripts)
+- [x] **23.4** Write deployment and operations guide (docs/deployment/README.md + new OPERATIONS.md: probes, alert thresholds, deploy/secret-rotation/incident runbooks, weekly ops checklist)
+- [x] **23.5** Create troubleshooting guide (docs/troubleshooting/README.md — symptom-first tables for auth, ordering/kitchen, dashboard, infra + diagnostics quick reference)
+- [x] **23.6** Develop onboarding documentation for new clients (docs/onboarding/README.md — day-0 provisioning, configuration checklist, staff enablement, week-1 success checks, reference pack)
 
 ### Week 24: Production Launch
 - [ ] **24.1** Set up production infrastructure
