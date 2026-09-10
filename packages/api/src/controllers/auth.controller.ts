@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import prisma from '../services/database';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../services/jwt';
+import { sensitiveDigest } from '../services/crypto';
 import {
   registerSchema,
   loginSchema,
@@ -76,6 +77,8 @@ export async function register(req: TenantRequest, res: Response, next: NextFunc
         role: role as any,
         tenantId,
         emailVerified: false,
+        // Week 22.4 — GDPR: stamp consent when the checkbox was supplied and true.
+        ...(data.consent === true ? { consentGivenAt: new Date() } : {}),
       },
     });
 
@@ -86,8 +89,8 @@ export async function register(req: TenantRequest, res: Response, next: NextFunc
       email: user.email,
     });
 
-    const session = await createSession(user.id);
-    const refreshToken = signRefreshToken({ userId: user.id, tokenId: session.id });
+    const { rawToken } = await createSession(user.id);
+    const refreshToken = signRefreshToken({ userId: user.id, tokenId: rawToken });
 
     // TODO (Week 3.6): send verification email with emailVerifyToken via SMTP
     console.log(`[auth] Verification token for ${user.email}: ${emailVerifyToken}`);
@@ -141,8 +144,8 @@ export async function login(req: TenantRequest, res: Response, next: NextFunctio
       email: user.email,
     });
 
-    const session = await createSession(user.id);
-    const refreshToken = signRefreshToken({ userId: user.id, tokenId: session.id });
+    const { rawToken } = await createSession(user.id);
+    const refreshToken = signRefreshToken({ userId: user.id, tokenId: rawToken });
 
     res.json({
       user: publicUser(user),
@@ -162,7 +165,8 @@ export async function refresh(req: AuthRequest, res: Response, next: NextFunctio
     const { refreshToken } = validateBody(refreshSchema, req.body);
     const payload = verifyRefreshToken(refreshToken);
 
-    const session = await prisma.session.findUnique({ where: { token: payload.tokenId } });
+    // Week 22.3 — tokens are stored at rest as authenticated digests only.
+    const session = await prisma.session.findUnique({ where: { token: sensitiveDigest(payload.tokenId, 'session') } });
 
     if (!session || session.expiresAt < new Date()) {
       return res.status(401).json({
@@ -194,8 +198,8 @@ export async function refresh(req: AuthRequest, res: Response, next: NextFunctio
       email: user.email,
     });
 
-    const newSession = await createSession(user.id);
-    const newRefreshToken = signRefreshToken({ userId: user.id, tokenId: newSession.id });
+    const { rawToken: newRawToken } = await createSession(user.id);
+    const newRefreshToken = signRefreshToken({ userId: user.id, tokenId: newRawToken });
 
     res.json({ accessToken, refreshToken: newRefreshToken });
   } catch (error) {
@@ -221,7 +225,7 @@ export async function logout(req: AuthRequest, res: Response, next: NextFunction
     if (body.refreshToken) {
       try {
         const payload = verifyRefreshToken(body.refreshToken);
-        await prisma.session.deleteMany({ where: { id: payload.tokenId } });
+        await prisma.session.deleteMany({ where: { token: sensitiveDigest(payload.tokenId, 'session') } });
       } catch {
         // Token already invalid - treat as logged out
       }
@@ -249,10 +253,11 @@ export async function forgotPassword(req: TenantRequest, res: Response, next: Ne
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
+      // Week 22.3 — reset codes are stored hashed at rest (never the raw hex).
       await prisma.session.create({
         data: {
           userId: user.id,
-          token: `pwd-reset:${resetToken}`,
+          token: sensitiveDigest(`pwd-reset:${resetToken}`, 'reset'),
           expiresAt,
         },
       });
@@ -275,7 +280,7 @@ export async function resetPassword(req: TenantRequest, res: Response, next: Nex
     const { token, password } = validateBody(resetPasswordSchema, req.body);
 
     const session = await prisma.session.findUnique({
-      where: { token: `pwd-reset:${token}` },
+      where: { token: sensitiveDigest(`pwd-reset:${token}`, 'reset') },
     });
 
     if (!session || session.expiresAt < new Date()) {
@@ -297,7 +302,7 @@ export async function resetPassword(req: TenantRequest, res: Response, next: Nex
       // Single-use: delete the reset token AND revoke all login sessions
       prisma.session.delete({ where: { id: session.id } }),
       prisma.session.deleteMany({
-        where: { userId: session.userId, token: { not: { startsWith: 'pwd-reset:' } } },
+        where: { userId: session.userId, token: { not: { startsWith: 'reset-sha256:' } } },
       }),
     ]);
 
@@ -307,12 +312,19 @@ export async function resetPassword(req: TenantRequest, res: Response, next: Nex
   }
 }
 
-async function createSession(userId: string) {
-  return prisma.session.create({
+/**
+ * Creates a login session, storing ONLY the keyed digest of the raw token at
+ * rest (Week 22.3). The raw token is returned once so callers can embed it in
+ * the signed refresh JWT — the client is the only holder of the plaintext.
+ */
+async function createSession(userId: string): Promise<{ rawToken: string }> {
+  const rawToken = crypto.randomUUID();
+  await prisma.session.create({
     data: {
       userId,
-      token: crypto.randomUUID(),
+      token: sensitiveDigest(rawToken, 'session'),
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000),
     },
   });
+  return { rawToken };
 }

@@ -172,7 +172,7 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **20.5** Add order recommendations (GET /api/recommendations — favorites top rebuys + popular bestsellers not tried, authed)
 - [x] **20.6** Create subscription/recurring orders (RecurringOrder model, customer CRUD /api/recurring-orders, MANAGER+ run-due spawns real orders via shared pricing helper)
 
-**Delivered:** 119/144 implementation ticks (148 total tasks across Weeks 1–20 incl. skipped); 294 API tests, 143 web tests, 0 tsc errors, 0 eslint errors, web build exit 0.
+**Delivered:** 125/144 implementation ticks (148 total tasks across Weeks 1–20 incl. skipped); 324 API tests, 149 web tests, 0 tsc errors, 0 eslint errors, web build exit 0.
 
 ### Week 21: Kitchen & Fulfillment Hardening
 - [x] **21.1** Kitchen status transitions (PATCH /:id/status with allowed-transition guard PENDING→CONFIRMED→PREPARING→READY, CANCELLED terminal, KitchenEvent audit, 409 STATUS_TRANSITION_INVALID)
@@ -183,12 +183,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
 
 ### Week 22: Security & Compliance
-- [ ] **22.1** Conduct security audit and penetration testing
-- [ ] **22.2** Implement rate limiting and DDoS protection
-- [ ] **22.3** Add data encryption at rest and in transit
-- [ ] **22.4** Implement GDPR compliance features
-- [ ] **22.5** Add data backup and recovery procedures
-- [ ] **22.6** Create security monitoring and alerting
+- [x] **22.1** Conduct security audit and penetration testing
+- [x] **22.2** Implement rate limiting and DDoS protection
+- [x] **22.3** Add data encryption at rest and in transit
+- [x] **22.4** Implement GDPR compliance features
+- [x] **22.5** Add data backup and recovery procedures
+- [x] **22.6** Create security monitoring and alerting
 
 ### Week 23: Documentation & Training Materials
 - [ ] **23.1** Create comprehensive API documentation

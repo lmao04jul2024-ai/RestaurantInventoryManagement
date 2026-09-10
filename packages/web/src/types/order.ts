@@ -177,6 +177,12 @@ export interface KitchenSettings {
   capacity: number;
 }
 
+/** Week 21.2 — `/api/orders/:id/assign` / unassign response shape: an order plus the assignment label. */
+export interface AssignedOrder extends Order {
+  /** Server-computed `{ id, name }` label (null after unassign). */
+  assignedStaff: AssignedStaff | null;
+}
+
 export interface KitchenSummary {
   windowDays: number;
   totalOrders: number;

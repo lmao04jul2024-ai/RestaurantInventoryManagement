@@ -126,6 +126,10 @@ model User {
   avatar      String?
   isActive    Boolean  @default(true)
   emailVerified Boolean @default(false)
+  /// Week 22.4 — GDPR: timestamp of consent to store/process personal data.
+  consentGivenAt DateTime?
+  /// Week 22.4 — GDPR right-to-erasure marker; personal fields are anonymized.
+  dataErasedAt DateTime?
   /// Week 16.5 — per-user permission overrides: { permission: true(grant) | false(deny) }.
   /// Absent keys fall through to the role's defaults; explicit false denies even role grants.
   permissionOverrides Json?

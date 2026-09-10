@@ -624,6 +624,45 @@ paths:
       responses:
         "200":
           description: text/event-stream of tenant order events
+  /api/me/data:
+    get:
+      tags: [Privacy]
+      summary: Data portability (22.4) — caller's profile, orders, reviews, loyalty entries
+      responses:
+        "200": { description: PersonalDataEnvelope }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/me:
+    delete:
+      tags: [Privacy]
+      summary: Right-to-erasure (22.4) — anonymize, disable, revoke sessions, audit
+      responses:
+        "200": { description: Erasure confirmation with anonymized profile }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/security/events:
+    get:
+      tags: [Security]
+      summary: Security monitoring — recent security:* events + 24h rollup (ADMIN; 22.6)
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200": { description: SecurityEvents (data + meta + summary) }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/security/health:
+    get:
+      tags: [Security]
+      summary: Control-objectives health — limiter, headers, key material, backups (ADMIN; 22.6)
+      responses:
+        "200": { description: SecurityHealth }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /api/orders/{id}:
     get:
       tags: [Orders]
@@ -1477,3 +1516,41 @@ components:
         countsByStatus:
           type: object
           additionalProperties: { type: integer }
+
+    PersonalDataEnvelope:
+      type: object
+      description: Week 22.4 — GDPR data portability payload
+      properties:
+        exportedAt: { type: string, format: date-time }
+        user: { type: object }
+        orders: { type: array, items: { type: object } }
+        reviews: { type: array, items: { type: object } }
+        loyaltyEntries: { type: array, items: { type: object } }
+
+    SecurityEvents:
+      type: object
+      description: Week 22.6 — security:* audit rows with a 24h alerting summary
+      properties:
+        data: { type: array, items: { type: object } }
+        meta: { type: object }
+        summary:
+          type: object
+          properties:
+            last24h: { type: integer }
+            byAction:
+              type: object
+              additionalProperties: { type: integer }
+
+    SecurityHealth:
+      type: object
+      description: Week 22.6 — control-objectives board
+      properties:
+        healthy: { type: boolean }
+        checkedAt: { type: string, format: date-time }
+        checks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              ok: { type: boolean }
+              detail: { type: string }

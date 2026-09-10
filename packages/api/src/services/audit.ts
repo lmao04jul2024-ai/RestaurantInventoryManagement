@@ -35,6 +35,27 @@ export async function writeAuditLog(input: AuditLogInput): Promise<void> {
   }
 }
 
+/**
+ * Week 22.6 — security-event sugar. Security events are ordinary audit rows
+ * with the `security:` action prefix so a single immutable store powers both
+ * the compliance trail and the monitoring surface (22.6 reads them back).
+ */
+export async function writeSecurityEvent(input: {
+  tenantId: string;
+  actorId: string;
+  action: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  await writeAuditLog({
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    action: `security:${input.action}`,
+    targetType: 'security',
+    targetId: input.action,
+    metadata: input.metadata,
+  });
+}
+
 export interface AuditLogQuery {
   tenantId: string;
   page?: number;
@@ -42,6 +63,8 @@ export interface AuditLogQuery {
   action?: string;
   targetType?: string;
   targetId?: string;
+  /** Week 22.6 — filters by `action: { startsWith: actionPrefix }` (e.g. 'security:'). */
+  actionPrefix?: string;
 }
 
 export async function listAuditLogs(query: AuditLogQuery) {
@@ -51,6 +74,7 @@ export async function listAuditLogs(query: AuditLogQuery) {
   const where = {
     tenantId: query.tenantId,
     ...(query.action ? { action: query.action } : {}),
+    ...(query.actionPrefix ? { action: { startsWith: query.actionPrefix } } : {}),
     ...(query.targetType ? { targetType: query.targetType } : {}),
     ...(query.targetId ? { targetId: query.targetId } : {}),
   };

@@ -1,4 +1,4 @@
-# Week 21 — Kitchen & Fulfillment Hardening (21.1–21.6)
+# Week 22 — Security & Compliance (22.1–22.6)
 
 ## Context
 - Tracker 119/144 (Weeks 1–20 done; 31 remaining/open across Weeks 2–24 incl. Week 12 skipped, Week 23–24 planned-ahead placeholders). Phase 5 continues.
@@ -14,10 +14,10 @@
 - [x] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
 
 ### Web
-- [ ] **21.1** Kitchen status actions in kitchen board (status dropdown/button with allowed transitions only, feedback toast, optimistic re-render)
+- [x] **21.1** Kitchen status actions in kitchen board (status dropdown/button with allowed transitions only, feedback toast, optimistic re-render)
 - [x] **21.2** Staff assignment UI (assign/unassign buttons, staff dropdown from /api/staff, show assigned staff on card)
 - [x] **21.3** Prep time display (prepStartedAt → elapsed, readyAt when ready, color by target)
-- [ ] **21.4** Prep time target config in tenant settings (MANAGER+ editable, default 15)
+- [x] **21.4** Prep time target config in tenant settings (MANAGER+ editable, default 15)
 - [x] **21.5** Capacity indicator (active count vs capacity, warning when near limit)
 - [x] **21.6** SSE field bindings (assignedStaff, prepElapsed, prepTargetMet re-render kitchen board)
 
@@ -43,9 +43,9 @@
 - [ ] Tests: service specs (status transitions, assign, prep analytics, capacity) + kitchen board + settings page specs
 
 ## Verification
-- [ ] API: tsc 0, eslint 0 errors, new jest green + old still passing
-- [ ] Web: tsc 0, jest green (+new), next build exit 0
-- [ ] openapi.yaml + admin guide updated; tracker 21.1–21.6 (119/144); commits api → web → docs/bookkeeping; memory push
+- [x] API: tsc 0, eslint 0 errors, new jest green + old still passing
+- [x] Web: tsc 0, jest green (+new), next build exit 0
+- [x] openapi.yaml + admin guide updated; tracker 21.1–21.6 (119/144); commits api → web → docs/bookkeeping; memory push
 
 ## Notes
 - Status transitions are the source of truth for prep timing — no separate "start prep" action; starting prep IS the transition.

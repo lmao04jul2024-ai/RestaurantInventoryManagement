@@ -12,6 +12,8 @@ export const registerSchema = Joi.object({
   lastName: Joi.string().trim().min(1).max(100).required(),
   phone: Joi.string().trim().max(20).allow('', null),
   tenantId: Joi.string().uuid().optional(), // fallback when no tenant context resolved
+  // Week 22.4 — GDPR consent checkbox; when true, consentGivenAt is stamped server-side.
+  consent: Joi.boolean().optional(),
 });
 
 export const loginSchema = Joi.object({

@@ -123,6 +123,25 @@ sidebar shows only the tools your role can open.
   `targetId`, actor, timestamp). Rows are insert-only — nothing can be edited
   or deleted.
 
+## 13. Security (Week 22 — ADMIN only)
+
+- **Health board** (`/dashboard/security` → `GET /api/security/health`):
+  rate-limit wiring, security headers, encryption-key state, password-hashing
+  policy, and backup-script presence — each check shows a pass/fail flag with
+  an explanatory note. Act when `encryptionAtRest` reports a missing
+  `ENCRYPTION_KEY` (prod), or when `backups` reports missing scripts.
+- **Events + rollup** (`GET /api/security/events`): recent `security:*` rows
+  plus a 24 h count breakdown by action (`auth_failed`, `rate_limited`,
+  `data_erasure`). Alert when `rate_limited` climbs (DDoS/credential-stuffing
+  pressure) or repeated `auth_failed` events look like a targeted attempt.
+- **Privacy operations**: customers use `/api/me/data` (export) and
+  `DELETE /api/me` (erasure) directly. For written DSRs, identify-verify the
+  requester, run the self-service flow in their tenant, and keep the envelope —
+  see `docs/privacy/README.md` for the 30-day SLA and process.
+- **Backups**: daily 02:10 UTC `scripts/backup.sh` with SHA-256 sidecars and a
+  14-dump rotation; restore drills are the gate, not the cron. Full runbook in
+  `docs/deployment/BACKUP.md`.
+
 ## Roles recap
 
 | Capability                   | CUSTOMER | SERVER | KITCHEN | MANAGER | ADMIN |

@@ -1,8 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, AccessTokenPayload } from '../services/jwt';
+import { writeSecurityEvent } from '../services/audit';
 
 export interface AuthRequest extends Request {
   user?: AccessTokenPayload;
+}
+
+/**
+ * Week 22.6 — fire-and-forget security events. Audit writes are fail-open, so
+ * monitoring never stands in the way of the auth decision. Tenant is unknown
+ * pre-resolution; events are attributed to the tenant embedded in the token
+ * when one can be verified, otherwise to the shared 'system' scope.
+ */
+function securityEvent(tenantId: string, action: string, metadata: Record<string, unknown>) {
+  try {
+    writeSecurityEvent({ tenantId, actorId: 'system', action, metadata });
+  } catch {
+    // Fail-open: monitoring must never break the auth decision path.
+  }
 }
 
 /**
@@ -13,6 +28,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      securityEvent('system', 'auth_missing_token', { path: req.path });
       return res.status(401).json({
         error: {
           code: 'NO_TOKEN',
@@ -28,6 +44,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     next();
   } catch (error) {
     if (error instanceof Error && error.name === 'TokenExpiredError') {
+      securityEvent('system', 'auth_token_expired', { path: req.path });
       return res.status(401).json({
         error: {
           code: 'TOKEN_EXPIRED',
@@ -36,6 +53,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
       });
     }
 
+    securityEvent('system', 'auth_failed', { path: req.path });
     return res.status(401).json({
       error: {
         code: 'INVALID_TOKEN',

@@ -1,6 +1,7 @@
 import api from '@/lib/api';
 import { Pagination } from '@/types/menu';
 import type {
+  AssignedOrder,
   AssignStaffPayload,
   CreateOrderPayload,
   KitchenAnalytics,
@@ -84,14 +85,14 @@ export const orderService = {
   // ── Week 21 — kitchen & fulfillment hardening ──────────────────────────────
 
   /** Week 21.2 — kitchen+ assigns a staff member to a ticket. */
-  async assignStaff(id: string, payload: AssignStaffPayload): Promise<Order> {
-    const { data } = await api.post<{ data: Order }>(`/orders/${id}/assign`, payload);
+  async assignStaff(id: string, payload: AssignStaffPayload): Promise<AssignedOrder> {
+    const { data } = await api.post<{ data: AssignedOrder }>(`/orders/${id}/assign`, payload);
     return data.data;
   },
 
   /** Week 21.2 — kitchen+ clears the assignment. */
-  async unassignStaff(id: string): Promise<Order> {
-    const { data } = await api.delete<{ data: Order }>(`/orders/${id}/assign`);
+  async unassignStaff(id: string): Promise<AssignedOrder> {
+    const { data } = await api.delete<{ data: AssignedOrder }>(`/orders/${id}/assign`);
     return data.data;
   },
 

@@ -22,12 +22,21 @@ import loyaltyRoutes from './routes/loyalty.routes';
 import promoRoutes from './routes/promo.routes';
 import recommendationRoutes from './routes/recommendations.routes';
 import recurringRoutes from './routes/recurring-orders.routes';
+import gdprRoutes from './routes/gdpr.routes';
+import securityRoutes from './routes/security.routes';
+import { authRateLimit, globalRateLimit } from './middleware/rate-limit';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:3000'];
+
+// Week 22.2 — behind a TLS-terminating proxy/CDN, trust the first hop so
+// `req.ip` reflects the real client (required for meaningful rate limiting).
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 // Security middleware
 app.use(helmet());
@@ -39,6 +48,12 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Week 22.2 — DDoS/abuse ceilings. The global limiter is a coarse per-IP
+// tripwire; details live in docs/security/AUDIT.md. Auth gets a much tighter
+// window to blunt credential stuffing (buckets are keyed separately).
+app.use(globalRateLimit);
+app.use('/api/auth', authRateLimit);
 
 // Request logging (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -81,6 +96,10 @@ app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/promo-codes', promoRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/recurring-orders', recurringRoutes);
+// Week 22.4 — GDPR self-service (data portability + erasure).
+app.use('/api/me', gdprRoutes);
+// Week 22.6 — security monitoring & control-objectives health (ADMIN).
+app.use('/api/security', securityRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);

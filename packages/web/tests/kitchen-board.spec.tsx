@@ -25,7 +25,7 @@ import {
 } from '@/hooks/use-orders';
 import { useAuth } from '@/hooks/use-auth';
 import { useStaff } from '@/hooks/use-staff';
-import type { KitchenQueueResponse } from '@/types/order';
+import type { KitchenQueueEntry, KitchenQueueResponse } from '@/types/order';
 
 const queueFn = useKitchenQueue as jest.Mock;
 const moveItemFn = useUpdateOrderItemStatus as jest.Mock;
@@ -39,12 +39,22 @@ const row = (over: Record<string, unknown> = {}) => ({
   id: 'order-1',
   orderNumber: 'ORD-1001',
   status: 'CONFIRMED',
-  createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-  scheduledFor: null,
+  paymentStatus: 'PENDING',
+  totalAmount: 20,
+  taxAmount: 0,
+  discountAmount: 0,
+  tableNumber: null,
   specialRequests: null,
+  scheduledFor: null,
+  customerId: 'cust-1',
+  tenantId: 'tenant-1',
+  tableId: null,
+  createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+  updatedAt: new Date().toISOString(),
+  completedAt: null,
   items: [],
   ...over,
-});
+}) as unknown as KitchenQueueEntry;
 
 const QUEUE: KitchenQueueResponse = {
   live: [
