@@ -562,9 +562,48 @@ paths:
   /api/orders/kitchen:
     get:
       tags: [Orders]
-      summary: KDS queue (order:read)
+      summary: KDS queue (order:read) — Week 21 rows carry assignedStaff, prepElapsedMinutes, prepTargetMet
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OrderStatus" }
+          description: Narrow the board to a single live stage (21.2)
       responses:
-        "200": { description: Kitchen queue }
+        "200": { description: Kitchen queue split into live and scheduled-future tickets }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/orders/kitchen/analytics:
+    get:
+      tags: [Orders]
+      summary: Prep-time analytics — avg prep, target-met share, throughput, per-status counts (order:read)
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 30, default: 1 }
+      responses:
+        "200": { description: KitchenAnalytics }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/orders/kitchen/settings:
+    get:
+      tags: [Orders]
+      summary: Effective kitchen settings (order:read) — defaults filled for absent values
+      responses:
+        "200": { description: KitchenSettings }
+    patch:
+      tags: [Orders]
+      summary: Merge kitchen settings (MANAGER+) — prepTimeTargetMinutes 1-240, capacity 0-999 (0 disables the cap)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prepTimeTargetMinutes: { type: integer, minimum: 1, maximum: 240 }
+                capacity: { type: integer, minimum: 0, maximum: 999 }
+      responses:
+        "200": { description: Merged KitchenSettings }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /api/orders/reports/summary:
     get:
       tags: [Orders]
@@ -619,6 +658,37 @@ paths:
                   enum: [PENDING, CONFIRMED, PREPARING, READY, COMPLETED, CANCELLED]
       responses:
         "200": { description: Status updated }
+  /api/orders/{id}/assign:
+    post:
+      tags: [Orders]
+      summary: Assign a staff member to a ticket (order:assign — KITCHEN/MANAGER/ADMIN; 21.2)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffId]
+              properties:
+                staffId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Updated order with assignedStaff (id and name)
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: ORDER_CLOSED — terminal orders cannot be reassigned
+    delete:
+      tags: [Orders]
+      summary: Clear the assignment (order:assign; 21.2)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Updated order with assignedStaff null
+        "409":
+          description: ORDER_NOT_ASSIGNED — nothing to clear
   /api/orders/{id}/cancel:
     post:
       tags: [Orders]
@@ -1379,3 +1449,31 @@ components:
           nullable: true
           additionalProperties: { type: boolean, nullable: true }
           description: Per-user override map; null clears all overrides
+
+    AssignedStaff:
+      type: object
+      description: Week 21.2 — { id, name } projection of an order's assigned staff member
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    KitchenSettings:
+      type: object
+      description: Week 21.4/21.5 — kitchen tuning knobs (Tenant.settings.kitchen)
+      properties:
+        prepTimeTargetMinutes: { type: integer, minimum: 1, maximum: 240 }
+        capacity: { type: integer, minimum: 0, maximum: 999, description: Soft cap of active tickets; 0 disables the guard }
+
+    KitchenAnalytics:
+      type: object
+      description: Week 21.3 — prep-time analytics for the kitchen window
+      properties:
+        windowDays: { type: integer }
+        completedCount: { type: integer }
+        avgPrepMinutes: { type: number }
+        prepTimeTargetMinutes: { type: integer }
+        targetMetPct: { type: integer, minimum: 0, maximum: 100 }
+        throughputPerHour: { type: number }
+        countsByStatus:
+          type: object
+          additionalProperties: { type: integer }

@@ -33,6 +33,34 @@ sidebar shows only the tools your role can open.
 - Cancel or settle orders (simulated payment gateway in dev).
 - The order-stream feeds live tray updates; the summary report rolls up a shift.
 
+### Kitchen & fulfilment (Week 21)
+
+- **Status transitions** stamp the kitchen timeline automatically: entering
+  `PREPARING` records `preparationStartedAt`, and reaching `READY` records
+  `readyAt`. Every transition is written to the audit trail as
+  `order:kitchen_status` (with targeted prep-time fields), so fulfilment lag
+  is reconstructible without a separate history table.
+- **Staff assignment** — KITCHEN/MANAGER/ADMIN can assign a staff member to a
+  live ticket via `POST /api/orders/:id/assign` (body `{ staffId }`) and clear
+  it with `DELETE /api/orders/:id/assign`. The board shows an
+  `assignedStaff: { id, name }` chip; reaching `READY` auto-clears the
+  assignment, and closed orders cannot be (un)assigned.
+- **Prep-time analytics** — `GET /api/orders/kitchen/analytics?days=1..30`
+  returns the average prep minutes (`readyAt − preparationStartedAt`) over
+  completed tickets, the percentage that met the tenant's target, throughput
+  per hour, and per-status counts. Use it to spot persistent over-target
+  items before they become complaints.
+- **Prep target & capacity knobs** — MANAGER+ can tune the kitchen via
+  `PATCH /api/orders/kitchen/settings`: `prepTimeTargetMinutes` (1–240,
+  default 15) and `capacity` (0–999, default 20; `0` disables the guard).
+  The kitchen board colors prep elapsed red when it exceeds the target and
+  shows a `live/capacity` indicator that warns (amber ≥ 80%) long before the
+  soft cap rejects new tickets.
+- **Soft capacity guard** — when active tickets (`PENDING`/`CONFIRMED`/
+  `PREPARING`) reach the configured capacity, new orders are rejected with
+  `429 KITCHEN_AT_CAPACITY` and a `Retry-After: 60` header. It is a soft
+  signal, not hard backpressure: set `capacity: 0` to turn it off entirely.
+
 ## 5. Purchase orders
 
 - Draft → submit → receive goods. Receiving auto-creates `RESTOCK` transactions

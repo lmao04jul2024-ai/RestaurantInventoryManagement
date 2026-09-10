@@ -172,15 +172,15 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **20.5** Add order recommendations (GET /api/recommendations — favorites top rebuys + popular bestsellers not tried, authed)
 - [x] **20.6** Create subscription/recurring orders (RecurringOrder model, customer CRUD /api/recurring-orders, MANAGER+ run-due spawns real orders via shared pricing helper)
 
-**Delivered:** 130/144 implementation ticks (148 total tasks across Weeks 1–20 incl. skipped); 275 API tests, 133 web tests, 0 tsc errors, 0 eslint errors, web build exit 0.
+**Delivered:** 119/144 implementation ticks (148 total tasks across Weeks 1–20 incl. skipped); 294 API tests, 143 web tests, 0 tsc errors, 0 eslint errors, web build exit 0.
 
 ### Week 21: Kitchen & Fulfillment Hardening
-- [ ] **21.1** Kitchen status transitions (PATCH /:id/status with allowed-transition guard PENDING→CONFIRMED→PREPARING→READY, CANCELLED terminal, KitchenEvent audit, 409 STATUS_TRANSITION_INVALID)
-- [ ] **21.2** Staff assignment (Order.staffId FK, POST /:id/assign kitchen+, GET /api/kitchen?status=, unassign on READY)
-- [ ] **21.3** Prep time tracking (Order.prepStartedAt/readyAt set on transitions, GET /api/kitchen/analytics avg prep time/throughput/per-status)
-- [ ] **21.4** Prep time targets config (TenantSetting `kitchen.prepTimeTargetMinutes` default 15, MANAGER+ writable, analytics compare vs target)
-- [ ] **21.5** Kitchen capacity soft cap (TenantSetting `kitchen.capacity` default 20, 429 with RETRY_AFTER when active count ≥ capacity, advisory)
-- [ ] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
+- [x] **21.1** Kitchen status transitions (PATCH /:id/status with allowed-transition guard PENDING→CONFIRMED→PREPARING→READY, CANCELLED terminal, KitchenEvent audit, 409 STATUS_TRANSITION_INVALID)
+- [x] **21.2** Staff assignment (Order.staffId FK, POST /:id/assign kitchen+, GET /api/kitchen?status=, unassign on READY)
+- [x] **21.3** Prep time tracking (Order.prepStartedAt/readyAt set on transitions, GET /api/kitchen/analytics avg prep time/throughput/per-status)
+- [x] **21.4** Prep time targets config (TenantSetting `kitchen.prepTimeTargetMinutes` default 15, MANAGER+ writable, analytics compare vs target)
+- [x] **21.5** Kitchen capacity soft cap (TenantSetting `kitchen.capacity` default 20, 429 with RETRY_AFTER when active count ≥ capacity, advisory)
+- [x] **21.6** Kitchen board SSE enrichment (assignedStaff name+id, prepElapsed, prepTargetMet in kitchen queue SSE, board re-renders)
 
 ### Week 22: Security & Compliance
 - [ ] **22.1** Conduct security audit and penetration testing
