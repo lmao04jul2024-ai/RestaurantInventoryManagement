@@ -93,6 +93,8 @@ model Tenant {
   seatsLimit        Int    @default(10)
   theme       Json?    @default("{}")
   features    Json?    @default("{}")
+  // Week 21.4/21.5 — tenant tuning knobs, namespaced: { kitchen: { prepTimeTargetMinutes, capacity } }.
+  settings    Json?    @default("{}")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -133,6 +135,7 @@ model User {
   
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   orders      Order[]
+  assignedOrders Order[] @relation("OrderAssignee")
   reviews     Review[]
   hostedGroupOrders GroupOrder[] @relation("GroupOrderHost")
   groupOrderItems GroupOrderItem[] @relation("GroupOrderItems")
@@ -287,9 +290,19 @@ model Order {
   tableId         String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
-  
+  // Week 21.1 — kitchen timeline: when prep starts and when the order is ready
+  // for pickup/delivery. Set only on the relevant status transitions (see
+  // order.controller.updateOrderStatus); null otherwise so completed orders
+  // remain queryable for prep-time analytics without a separate history model.
+  preparationStartedAt DateTime?
+  readyAt              DateTime?
+  completedAt          DateTime?
+  // Week 21.2 — staff assignment: the kitchen/server member responsible for
+  // this ticket. Cleared automatically when the order becomes READY (the
+  // hand-off point), see order.controller.updateOrderStatus.
+  assignedToId      String?
   customer        User     @relation(fields: [customerId], references: [id])
+  assignee        User?    @relation("OrderAssignee", fields: [assignedToId], references: [id])
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   table           Table?   @relation(fields: [tableId], references: [id])
   items           OrderItem[]

@@ -448,6 +448,30 @@ export const orderStatusSchema = Joi.object({
   status: Joi.string().valid(...ORDER_STATUSES).required(),
 });
 
+/** Week 21.2 — staff assignment on orders (kitchen+). */
+export const orderAssignSchema = Joi.object({
+  staffId: uuid.required(),
+});
+
+/** Week 21.2 — optional live-status filter for the kitchen queue. */
+export const kitchenQueueQuerySchema = Joi.object({
+  status: Joi.string().valid(...ORDER_STATUSES).optional(),
+});
+
+/** Week 21.3 — prep-time analytics window (days looked back). */
+export const kitchenAnalyticsQuerySchema = Joi.object({
+  days: Joi.number().integer().min(1).max(30).default(1),
+});
+
+/**
+ * Week 21.4/21.5 — kitchen tuning knobs (MANAGER+ writable), persisted under
+ * `Tenant.settings.kitchen`. capacity 0 explicitly disables the soft cap.
+ */
+export const kitchenSettingsSchema = Joi.object({
+  prepTimeTargetMinutes: Joi.number().integer().min(1).max(240),
+  capacity: Joi.number().integer().min(0).max(999),
+}).min(1);
+
 /** Kitchen line progress only ever advances PREPARING or READY. */
 export const orderItemStatusSchema = Joi.object({
   status: Joi.string().valid('PREPARING', 'READY').required(),

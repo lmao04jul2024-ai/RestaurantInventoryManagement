@@ -11,6 +11,7 @@ jest.mock('../src/services/database', () => ({
   default: {
     user: { findFirst: jest.fn() },
     table: { findFirst: jest.fn() },
+    tenant: { findFirst: jest.fn(), update: jest.fn() },
     menuItem: { findMany: jest.fn() },
     order: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), create: jest.fn(), update: jest.fn(), count: jest.fn(), aggregate: jest.fn() },
     orderItem: { groupBy: jest.fn() },

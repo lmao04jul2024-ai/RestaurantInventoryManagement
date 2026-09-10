@@ -19,6 +19,7 @@ jest.mock('../src/services/database', () => ({
     menuItem: { findMany: jest.fn() },
     user: { findFirst: jest.fn() },
     table: { findFirst: jest.fn() },
+    tenant: { findFirst: jest.fn(), update: jest.fn() },
     payment: { upsert: jest.fn() },
     // Both transaction shapes: array (parallel ops) and interactive (tx => ...).
     $transaction: jest.fn(async (ops: unknown) => {
@@ -34,12 +35,20 @@ jest.mock('../src/services/order-events', () => ({
   subscribeOrderEvents: jest.fn(() => jest.fn()),
 }));
 
+jest.mock('../src/services/audit', () => ({
+  __esModule: true,
+  // The controller chains `.catch(...)` on the returned promise, so the mock
+  // must resolve rather than return undefined.
+  writeAuditLog: jest.fn(() => Promise.resolve(undefined)),
+}));
+
 import prisma from '../src/services/database';
 import type { TenantRequest } from '../src/middleware/tenant';
 import type { MockRes } from './helpers/mock-express';
 import { asRequest, createRes } from './helpers/mock-express';
 import { makeMenuRow, makeOrderRow } from './factories/order';
 import { publishOrderEvent, subscribeOrderEvents } from '../src/services/order-events';
+import { writeAuditLog } from '../src/services/audit';
 
 /** Joi uuid validation requires real-shaped identifiers in params/bodies. */
 const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -282,6 +291,70 @@ describe('order status workflow (9.2)', () => {
     expect(prisma.order.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED', completedAt: expect.any(Date) }) }),
     );
+  });
+
+  it('stamps preparationStartedAt on CONFIRMED → PREPARING and writes the kitchen audit trail (21.1)', async () => {
+    (prisma.order.findFirst as jest.Mock).mockResolvedValue(compact({ status: 'CONFIRMED' }));
+    (prisma.order.update as jest.Mock).mockResolvedValue(makeOrderRow({ status: 'PREPARING' }));
+
+    const { res } = await run(updateOrderStatus, {
+      ...tenantReq(),
+      params: { id: oid },
+      body: { status: 'PREPARING' },
+    });
+
+    expect(prisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'PREPARING', preparationStartedAt: expect.any(Date) }) }),
+    );
+    expect(writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        actorId: 'user-1',
+        action: 'order:kitchen_status',
+        targetType: 'order',
+        targetId: 'order-1',
+        metadata: expect.objectContaining({ fromStatus: 'CONFIRMED', toStatus: 'PREPARING', readyAt: null }),
+      }),
+    );
+    const meta = (writeAuditLog as jest.Mock).mock.calls[0][0].metadata;
+    expect(meta.preparationStartedAt).toBeInstanceOf(Date);
+    expect(bodyOf(res)).toMatchObject({ data: { status: 'PREPARING' } });
+  });
+
+  it('stamps readyAt on PREPARING → READY (21.1)', async () => {
+    (prisma.order.findFirst as jest.Mock).mockResolvedValue(compact({ status: 'PREPARING' }));
+    (prisma.order.update as jest.Mock).mockResolvedValue(makeOrderRow({ status: 'READY' }));
+
+    await run(updateOrderStatus, {
+      ...tenantReq(),
+      params: { id: oid },
+      body: { status: 'READY' },
+    });
+
+    expect(prisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'READY', readyAt: expect.any(Date) }) }),
+    );
+    const meta = (writeAuditLog as jest.Mock).mock.calls[0][0].metadata;
+    expect(meta.readyAt).toBeInstanceOf(Date);
+    expect(meta.preparationStartedAt).toBeNull();
+  });
+
+  it('keeps the transition alive when audit persistence fails (21.1 fail-open)', async () => {
+    (prisma.order.findFirst as jest.Mock).mockResolvedValue(compact({ status: 'CONFIRMED' }));
+    (prisma.order.update as jest.Mock).mockResolvedValue(makeOrderRow({ status: 'PREPARING' }));
+    (writeAuditLog as jest.Mock).mockRejectedValueOnce(new Error('audit store down'));
+
+    const { res, next } = await run(updateOrderStatus, {
+      ...tenantReq(),
+      params: { id: oid },
+      body: { status: 'PREPARING' },
+    });
+
+    expect(next).not.toHaveBeenCalled();
+    expect(prisma.order.update).toHaveBeenCalled();
+    expect(bodyOf(res)).toMatchObject({ data: { status: 'PREPARING' } });
+    // Restore the resolving default for later tests (clearAllMocks keeps impls).
+    (writeAuditLog as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('rejects skipping lifecycle stages with 409', async () => {

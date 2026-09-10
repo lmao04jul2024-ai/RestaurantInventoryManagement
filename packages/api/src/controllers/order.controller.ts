@@ -4,6 +4,7 @@ import prisma from '../services/database';
 import { TenantRequest } from '../middleware/tenant';
 import { httpError, requireTenant } from '../utils/http-error';
 import { OrderEvent, publishOrderEvent, subscribeOrderEvents } from '../services/order-events';
+import { writeAuditLog } from '../services/audit';
 import {
   generateOrderNumber,
   resolveOrderLines,
@@ -11,9 +12,14 @@ import {
 } from '../services/order-pricing';
 import { awardLoyaltyPoints, redeemLoyaltyPoints } from '../services/loyalty';
 import { consumePromoRedemption, evaluatePromoCode } from '../services/promos';
+import { normalizeKitchenSettings } from '../services/kitchen-settings';
 import {
   createOrderSchema,
   idParamSchema,
+  kitchenAnalyticsQuerySchema,
+  kitchenQueueQuerySchema,
+  kitchenSettingsSchema,
+  orderAssignSchema,
   orderItemStatusSchema,
   orderQuerySchema,
   orderStatusSchema,
@@ -79,7 +85,7 @@ async function loadOrderForTenant(tenantId: string, id: string) {
 async function findOrderForTenant(tenantId: string, id: string) {
   const order = await prisma.order.findFirst({
     where: { id, tenantId },
-    select: { id: true, customerId: true, status: true, paymentStatus: true, totalAmount: true },
+    select: { id: true, customerId: true, status: true, paymentStatus: true, totalAmount: true, assignedToId: true },
   });
   if (!order) throw httpError(404, 'ORDER_NOT_FOUND', 'Order not found');
   return order;
@@ -113,6 +119,27 @@ export async function createOrder(req: TenantRequest, res: Response, next: NextF
         select: { id: true },
       });
       if (!table) throw httpError(404, 'TABLE_NOT_FOUND', 'Table not found for this tenant');
+    }
+
+    // Week 21.5 — kitchen capacity soft cap: refuse new tickets while the
+    // active queue is at/over the tenant's configured capacity (0 disables
+    // the guard). Advisory: Retry-After hints the client, nothing is queued.
+    const kitchenSettings = await loadKitchenSettings(tenantId);
+    if (kitchenSettings.capacity > 0) {
+      const activeCount = await prisma.order.count({
+        where: {
+          tenantId,
+          status: { in: [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PREPARING] },
+        },
+      });
+      if (activeCount >= kitchenSettings.capacity) {
+        res.setHeader('Retry-After', '60');
+        throw httpError(
+          429,
+          'KITCHEN_AT_CAPACITY',
+          `Kitchen is at capacity (${activeCount}/${kitchenSettings.capacity} active orders); retry shortly`,
+        );
+      }
     }
 
     // Resolve menu items in-tenant; verify availability at the current instant.
@@ -330,15 +357,48 @@ export async function updateOrderStatus(req: TenantRequest, res: Response, next:
       throw httpError(409, 'PAYMENT_FAILED', 'Order payment failed; resolve before progressing');
     }
 
+    const data: Prisma.OrderUpdateInput = { status };
+    // Kitchen timeline: record when preparation starts and when the order is ready.
+    if (order.status !== OrderStatus.PREPARING && status === OrderStatus.PREPARING) {
+      data.preparationStartedAt = new Date();
+    }
+    if (order.status !== OrderStatus.READY && status === OrderStatus.READY) {
+      data.readyAt = new Date();
+      // Week 21.2 — the hand-off to front-of-house clears the assignment.
+      data.assignee = { disconnect: true };
+    }
+    if (status === OrderStatus.COMPLETED) {
+      data.completedAt = new Date();
+    }
+
     const updated = await prisma.order.update({
       where: { id },
-      data: {
-        status,
-        ...(status === OrderStatus.COMPLETED ? { completedAt: new Date() } : {}),
-      },
+      data,
       include: ORDER_INCLUDE,
     });
+
     publishOrderEvent(tenantId, { type: 'order:updated', orderId: updated.id, status: updated.status });
+
+    // Kitchen audit trail (Week 21.1): persist an immutable record of every
+    // status transition for the KDS / fulfillment history.
+    await writeAuditLog({
+      tenantId,
+      actorId: req.user?.userId ?? 'system',
+      action: 'order:kitchen_status',
+      targetType: 'order',
+      targetId: updated.id,
+      metadata: {
+        fromStatus: order.status,
+        toStatus: status,
+        preparationStartedAt: data.preparationStartedAt ?? null,
+        readyAt: data.readyAt ?? null,
+      },
+    }).catch((e) => {
+      // Audit logging must not break the mutation it records.
+      // eslint-disable-next-line no-console
+      console.error('[kitchen-audit] failed to persist kitchen event', e);
+    });
+
     res.json({ data: updated });
   } catch (e) {
     next(e);
@@ -536,23 +596,221 @@ export async function payOrder(req: TenantRequest, res: Response, next: NextFunc
 export async function kitchenQueue(req: TenantRequest, res: Response, next: NextFunction) {
   try {
     const tenantId = requireTenant(req.tenantId);
+    // Week 21.2 — optional `?status=` narrows the board to a single live stage;
+    // the default stays "accepted, not yet ready".
+    const { status } = validateQuery(kitchenQueueQuerySchema, req.query ?? {});
+    const settings = await loadKitchenSettings(tenantId);
     // Accepted orders only: PENDING awaits staff confirmation, terminal ones are done.
     // Week 20.1 — scheduled (future) tickets surface separately below so the pass
     // works the live queue while seeing what's booked ahead.
     const rows = await prisma.order.findMany({
-      where: { tenantId, status: { in: [OrderStatus.CONFIRMED, OrderStatus.PREPARING] } },
+      where: {
+        tenantId,
+        status: status ? { in: [status as OrderStatus] } : { in: [OrderStatus.CONFIRMED, OrderStatus.PREPARING] },
+      },
       include: {
         table: { select: { id: true, name: true, number: true } },
         items: {
           include: { menuItem: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        assignee: { select: { id: true, firstName: true, lastName: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
-    const live = rows.filter((o) => !o.scheduledFor || o.scheduledFor <= new Date());
-    const scheduled = rows.filter((o) => o.scheduledFor && o.scheduledFor > new Date());
+
+    // Week 21.6 — SSE/board enrichment: who owns the ticket, how long prep has
+    // been running, and whether finished prep beat the configured target.
+    const now = Date.now();
+    const decorate = (order: (typeof rows)[number]) => ({
+      ...order,
+      assignedStaff: toAssignedStaff(order.assignee),
+      prepElapsedMinutes: order.preparationStartedAt
+        ? Math.max(0, Math.round((now - order.preparationStartedAt.getTime()) / 60000))
+        : null,
+      prepTargetMet:
+        order.preparationStartedAt && order.readyAt
+          ? (order.readyAt.getTime() - order.preparationStartedAt.getTime()) / 60000 <= settings.prepTimeTargetMinutes
+          : null,
+    });
+
+    const live = rows.filter((o) => !o.scheduledFor || o.scheduledFor <= new Date()).map(decorate);
+    const scheduled = rows.filter((o) => o.scheduledFor && o.scheduledFor > new Date()).map(decorate);
     res.json({ data: { live, scheduled } });
+  } catch (e) {
+    next(e);
+  }
+}
+
+// ── Week 21 — kitchen & fulfillment hardening ────────────────────────────────
+
+/** Reads `Tenant.settings` and returns the effective kitchen knobs (defaults fill gaps). */
+async function loadKitchenSettings(tenantId: string) {
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: tenantId },
+    select: { settings: true },
+  });
+  return normalizeKitchenSettings(tenant?.settings);
+}
+
+type AssigneeRow = { id: string; firstName: string; lastName: string } | null;
+
+/** Projects an assignee relation onto the `{ id, name }` shape the board renders. */
+function toAssignedStaff(assignee: AssigneeRow) {
+  if (!assignee) return null;
+  const name = `${assignee.firstName} ${assignee.lastName}`.trim();
+  return { id: assignee.id, name };
+}
+
+/** Week 21.2 — kitchen+ assigns a staff member (SERVER/KITCHEN/MANAGER/ADMIN) to a ticket. */
+export async function assignOrderStaff(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const { id } = validateParams(idParamSchema, req.params);
+    const { staffId } = validateBody(orderAssignSchema, req.body);
+
+    const order = await findOrderForTenant(tenantId, id);
+    if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED) {
+      throw httpError(409, 'ORDER_CLOSED', 'Cannot assign staff to a closed order');
+    }
+    const staff = await prisma.user.findFirst({
+      where: { id: staffId, tenantId, isActive: true, role: { not: UserRole.CUSTOMER } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (!staff) throw httpError(404, 'STAFF_NOT_FOUND', 'Staff member not found for this tenant');
+
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { assignee: { connect: { id: staff.id } } },
+      include: { ...ORDER_INCLUDE, assignee: { select: { id: true, firstName: true, lastName: true } } },
+    });
+
+    publishOrderEvent(tenantId, { type: 'order:updated', orderId: updated.id, status: updated.status });
+    await writeAuditLog({
+      tenantId,
+      actorId: req.user?.userId ?? 'system',
+      action: 'order:assign',
+      targetType: 'order',
+      targetId: updated.id,
+      metadata: { staffId: staff.id },
+    }).catch(() => undefined);
+
+    res.json({ data: { ...updated, assignedStaff: toAssignedStaff(updated.assignee) } });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** Week 21.2 — kitchen+ clears the assignment (409 when nothing is set). */
+export async function unassignOrderStaff(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const { id } = validateParams(idParamSchema, req.params);
+
+    const order = await findOrderForTenant(tenantId, id);
+    if (!order.assignedToId) {
+      throw httpError(409, 'ORDER_NOT_ASSIGNED', 'Order has no assigned staff');
+    }
+
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { assignee: { disconnect: true } },
+      include: { ...ORDER_INCLUDE, assignee: { select: { id: true, firstName: true, lastName: true } } },
+    });
+
+    publishOrderEvent(tenantId, { type: 'order:updated', orderId: updated.id, status: updated.status });
+    await writeAuditLog({
+      tenantId,
+      actorId: req.user?.userId ?? 'system',
+      action: 'order:unassign',
+      targetType: 'order',
+      targetId: updated.id,
+      metadata: { previousStaffId: order.assignedToId },
+    }).catch(() => undefined);
+
+    res.json({ data: { ...updated, assignedStaff: null } });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * Week 21.3/21.4 — prep-time analytics for the kitchen window:
+ * average prep minutes (readyAt − preparationStartedAt) over completed tickets,
+ * the share that met the configured target, throughput per hour, and
+ * per-status counts of orders created in the window.
+ */
+export async function kitchenAnalytics(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const { days } = validateQuery(kitchenAnalyticsQuerySchema, req.query);
+    const settings = await loadKitchenSettings(tenantId);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const completed = await prisma.order.findMany({
+      where: { tenantId, status: OrderStatus.COMPLETED, readyAt: { gte: since }, preparationStartedAt: { not: null } },
+      select: { preparationStartedAt: true, readyAt: true },
+    });
+    const prepMinutes = completed.map((o) => (o.readyAt!.getTime() - o.preparationStartedAt!.getTime()) / 60000);
+    const avgPrepMinutes = prepMinutes.length
+      ? round2(prepMinutes.reduce((sum, m) => sum + m, 0) / prepMinutes.length)
+      : 0;
+    const targetMetPct = prepMinutes.length
+      ? Math.round((prepMinutes.filter((m) => m <= settings.prepTimeTargetMinutes).length / prepMinutes.length) * 100)
+      : 0;
+
+    const byStatus = await prisma.order.groupBy({
+      by: ['status'],
+      where: { tenantId, createdAt: { gte: since } },
+      _count: true,
+      orderBy: { status: 'asc' },
+    });
+    const countsByStatus = Object.fromEntries(
+      byStatus.map((row) => [row.status, row._count]),
+    ) as Record<OrderStatus, number>;
+
+    res.json({
+      data: {
+        windowDays: days,
+        completedCount: completed.length,
+        avgPrepMinutes,
+        prepTimeTargetMinutes: settings.prepTimeTargetMinutes,
+        targetMetPct,
+        throughputPerHour: round2(completed.length / (days * 24)),
+        countsByStatus,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** Week 21.4/21.5 — read the effective kitchen settings (defaults included). */
+export async function getKitchenSettings(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const settings = await loadKitchenSettings(tenantId);
+    res.json({ data: settings });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** Week 21.4/21.5 — MANAGER+ merges provided knobs into `Tenant.settings.kitchen`. */
+export async function updateKitchenSettings(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const patch = validateBody(kitchenSettingsSchema, req.body);
+
+    const tenant = await prisma.tenant.findFirst({ where: { id: tenantId }, select: { settings: true } });
+    const current = normalizeKitchenSettings(tenant?.settings);
+    const merged = { ...current, ...patch };
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { settings: { kitchen: merged } as unknown as Prisma.InputJsonValue },
+    });
+    res.json({ data: merged });
   } catch (e) {
     next(e);
   }

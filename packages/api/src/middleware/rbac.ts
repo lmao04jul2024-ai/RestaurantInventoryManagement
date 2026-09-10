@@ -124,6 +124,7 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'menu:read',
     'order:read',
     'order:update:status',
+    'order:assign',
     'inventory:read',
     'inventory:update:stock',
   ],
