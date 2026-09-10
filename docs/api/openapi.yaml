@@ -101,6 +101,10 @@ paths:
       responses:
         "200":
           description: accessToken + refreshToken + user
+        "400":
+          description: |
+            TENANT_AMBIGUOUS — the credentials match active accounts in more
+            than one tenant; retry with tenantId (or X-Tenant-ID) to choose one.
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/auth/refresh:
     post:

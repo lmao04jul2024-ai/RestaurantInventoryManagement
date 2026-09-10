@@ -93,8 +93,9 @@ describe('22.1 — transport hardening (live app)', () => {
   });
 
   it('rejects malformed input at the validation gate (mass-assignment / injection probes)', async () => {
-    // resolveTenant must pass *before* validation is reached, so pin a tenant.
-    const probe = await request(app).post('/api/auth/login').set('x-tenant-id', 'tenant-1').send({
+    // Credential-entry auth routes need no tenant context (L052) and reach
+    // validation before any database dependency — no pinning required.
+    const probe = await request(app).post('/api/auth/login').send({
       email: { $gt: '' },              // Prisma/Mongo-style operator smuggling
       password: 'Xy12345',
       role: 'ADMIN',                    // mass-assignment attempt

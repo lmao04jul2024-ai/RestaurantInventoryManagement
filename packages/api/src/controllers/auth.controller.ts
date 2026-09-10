@@ -14,8 +14,16 @@ import {
 } from '../utils/validation';
 import { TenantRequest } from '../middleware/tenant';
 import { AuthRequest } from '../middleware/auth';
+import { runWithTenant } from '../services/tenant-context';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
+
+/**
+ * Precomputed bcrypt digest that equalizes login-failure timing when no
+ * account matches the email (Week 22.2 anti-enumeration posture): the
+ * no-account path runs the same bcrypt KDF as the wrong-password path.
+ */
+const TIMING_EQUALIZER_HASH = bcrypt.hashSync('timing-equalizer', 12);
 
 function publicUser(user: { id: string; email: string; firstName: string; lastName: string; role: string; tenantId: string; emailVerified: boolean }) {
   return {
@@ -111,24 +119,32 @@ export async function register(req: TenantRequest, res: Response, next: NextFunc
 export async function login(req: TenantRequest, res: Response, next: NextFunction) {
   try {
     const data = validateBody(loginSchema, req.body);
-    const tenantId = req.tenantId || data.tenantId;
 
-    if (!tenantId) {
-      return res.status(400).json({
-        error: {
-          code: 'TENANT_REQUIRED',
-          message: 'Tenant context is required to log in',
-        },
-      });
-    }
-
-    const user = await prisma.user.findFirst({
-      // Identity is scoped per tenant: same email can exist in two restaurants.
-      where: { email: data.email.toLowerCase(), tenantId, isActive: true },
+    // Identity is scoped per tenant (the same email may exist in two
+    // restaurants), but the tenant cannot be known before credentials are
+    // verified — the web app has neither a JWT nor a tenant subdomain on its
+    // first login (L052: resolveTenant gating /login made every login fail
+    // with TENANT_REQUIRED). Resolve the tenant from the credential match
+    // itself; an explicit body tenantId (organization code) may pre-narrow.
+    const candidates = await prisma.user.findMany({
+      where: {
+        email: data.email.toLowerCase(),
+        isActive: true,
+        ...(data.tenantId ? { tenantId: data.tenantId } : {}),
+      },
     });
 
-    // Uniform response to prevent user enumeration
-    if (!user || !(await bcrypt.compare(data.password, user.password))) {
+    const matches: typeof candidates = [];
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(data.password, candidate.password)) {
+        matches.push(candidate);
+      }
+    }
+
+    // Uniform failure prevents user enumeration; the dummy compare equalizes
+    // the no-account timing path against the bcrypt-always-ran path (Week 22.2).
+    if (matches.length === 0) {
+      await bcrypt.compare(data.password, TIMING_EQUALIZER_HASH);
       return res.status(401).json({
         error: {
           code: 'INVALID_CREDENTIALS',
@@ -137,6 +153,18 @@ export async function login(req: TenantRequest, res: Response, next: NextFunctio
       });
     }
 
+    if (matches.length > 1) {
+      return res.status(400).json({
+        error: {
+          code: 'TENANT_AMBIGUOUS',
+          message:
+            'These credentials match accounts in multiple restaurants. Provide tenantId (or X-Tenant-ID) to choose one.',
+        },
+      });
+    }
+
+    const user = matches[0];
+
     const accessToken = signAccessToken({
       userId: user.id,
       tenantId: user.tenantId,
@@ -144,8 +172,12 @@ export async function login(req: TenantRequest, res: Response, next: NextFunctio
       email: user.email,
     });
 
-    const { rawToken } = await createSession(user.id);
-    const refreshToken = signRefreshToken({ userId: user.id, tokenId: rawToken });
+    // The Prisma tenant guard only rewrites queries under a tenant context;
+    // run downstream work inside the matched user's tenant for consistent scoping.
+    const { rawToken, refreshToken } = await runWithTenant(user.tenantId, async () => {
+      const { rawToken: t } = await createSession(user.id);
+      return { rawToken: t, refreshToken: signRefreshToken({ userId: user.id, tokenId: t }) };
+    });
 
     res.json({
       user: publicUser(user),
