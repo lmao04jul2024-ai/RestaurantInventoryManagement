@@ -2,6 +2,10 @@
 
 Deployment targets for the `RestaurantInventoryMgmtAndOrders` monorepo.
 
+> **Related docs** — day-to-day operations, monitoring and runbooks:
+> [`OPERATIONS.md`](./OPERATIONS.md) · backup/restore drills:
+> [`BACKUP.md`](./BACKUP.md) · production go-live: the Week 24 roadmap items.
+
 ## Architecture
 
 ```
