@@ -1,8 +1,11 @@
 import api from '@/lib/api';
 import { Pagination } from '@/types/menu';
 import type {
+  AssignStaffPayload,
   CreateOrderPayload,
-  KitchenQueuePayload,
+  KitchenAnalytics,
+  KitchenQueueResponse,
+  KitchenSettings,
   KitchenSummary,
   Order,
   OrderItem,
@@ -65,15 +68,50 @@ export const orderService = {
     return data.data;
   },
 
-  async kitchenQueue(): Promise<KitchenQueuePayload> {
-    const { data } = await api.get<{ data: KitchenQueuePayload }>('/orders/kitchen/queue');
+  // Week 21 — the queue is always the live/scheduled split shape.
+  async kitchenQueue(): Promise<KitchenQueueResponse> {
+    const { data } = await api.get<{ data: KitchenQueueResponse }>('/orders/kitchen');
     return data.data;
   },
 
   async orderSummary(query: { days?: number } = {}): Promise<KitchenSummary> {
-    const { data } = await api.get<{ data: KitchenSummary }>('/orders/report/summary', {
+    const { data } = await api.get<{ data: KitchenSummary }>('/orders/reports/summary', {
       params: query,
     });
+    return data.data;
+  },
+
+  // ── Week 21 — kitchen & fulfillment hardening ──────────────────────────────
+
+  /** Week 21.2 — kitchen+ assigns a staff member to a ticket. */
+  async assignStaff(id: string, payload: AssignStaffPayload): Promise<Order> {
+    const { data } = await api.post<{ data: Order }>(`/orders/${id}/assign`, payload);
+    return data.data;
+  },
+
+  /** Week 21.2 — kitchen+ clears the assignment. */
+  async unassignStaff(id: string): Promise<Order> {
+    const { data } = await api.delete<{ data: Order }>(`/orders/${id}/assign`);
+    return data.data;
+  },
+
+  /** Week 21.3/21.4 — prep-time analytics for the kitchen window. */
+  async kitchenAnalytics(query: { days?: number } = {}): Promise<KitchenAnalytics> {
+    const { data } = await api.get<{ data: KitchenAnalytics }>('/orders/kitchen/analytics', {
+      params: query,
+    });
+    return data.data;
+  },
+
+  /** Week 21.4/21.5 — read the effective kitchen settings. */
+  async getKitchenSettings(): Promise<KitchenSettings> {
+    const { data } = await api.get<{ data: KitchenSettings }>('/orders/kitchen/settings');
+    return data.data;
+  },
+
+  /** Week 21.4/21.5 — MANAGER+ merge of kitchen settings. */
+  async updateKitchenSettings(payload: Partial<KitchenSettings>): Promise<KitchenSettings> {
+    const { data } = await api.patch<{ data: KitchenSettings }>('/orders/kitchen/settings', payload);
     return data.data;
   },
 };

@@ -134,6 +134,49 @@ export interface PayOrderPayload {
   transactionId?: string | null;
 }
 
+/** Week 21.2 — `{ id, name }` projection of an order's assigned staff member. */
+export interface AssignedStaff {
+  id: string;
+  name: string;
+}
+
+/** Week 21.6 — kitchen queue row enriched with assignment + prep-timing data. */
+export interface KitchenQueueEntry extends Order {
+  assignedStaff?: AssignedStaff | null;
+  /** Minutes since preparationStartedAt (null when prep has not started). */
+  prepElapsedMinutes?: number | null;
+  /** Did finished prep beat the tenant's target? null until the order is READY. */
+  prepTargetMet?: boolean | null;
+}
+
+/** Week 21 — the kitchen queue always returns the split shape. */
+export interface KitchenQueueResponse {
+  live: KitchenQueueEntry[];
+  scheduled: KitchenQueueEntry[];
+}
+
+/** Week 21.2 — assign/unassign payload (kitchen+ endpoints). */
+export interface AssignStaffPayload {
+  staffId: string;
+}
+
+/** Week 21.3 — prep-time analytics for the kitchen window. */
+export interface KitchenAnalytics {
+  windowDays: number;
+  completedCount: number;
+  avgPrepMinutes: number;
+  prepTimeTargetMinutes: number;
+  targetMetPct: number;
+  throughputPerHour: number;
+  countsByStatus: Partial<Record<OrderStatus, number>>;
+}
+
+/** Week 21.4/21.5 — kitchen tuning knobs (Tenant.settings.kitchen). */
+export interface KitchenSettings {
+  prepTimeTargetMinutes: number;
+  capacity: number;
+}
+
 export interface KitchenSummary {
   windowDays: number;
   totalOrders: number;

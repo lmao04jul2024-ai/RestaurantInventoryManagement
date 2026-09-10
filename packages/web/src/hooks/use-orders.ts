@@ -74,9 +74,29 @@ export function useOrderSummary(days = 7) {
   });
 }
 
+// ── Week 21 — kitchen & fulfillment hardening ────────────────────────────────
+
+/** Week 21.3/21.4 — prep-time analytics (window in days). */
+export function useKitchenAnalytics(days = 1) {
+  return useQuery({
+    queryKey: ['kitchen-analytics', days],
+    queryFn: () => orderService.kitchenAnalytics({ days }),
+    staleTime: 15_000,
+  });
+}
+
+/** Week 21.4/21.5 — effective kitchen settings (target minutes + capacity). */
+export function useKitchenSettings() {
+  return useQuery({
+    queryKey: ['kitchen-settings'],
+    queryFn: () => orderService.getKitchenSettings(),
+    staleTime: 60_000,
+  });
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
-const ORDER_KEYS = ['orders', 'kitchen-queue', 'order-summary'] as const;
+const ORDER_KEYS = ['orders', 'kitchen-queue', 'kitchen-analytics', 'order-summary'] as const;
 
 export function useCreateOrder() {
   const qc = useQueryClient();
@@ -126,6 +146,25 @@ export function usePayOrder() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: PayOrderPayload }) =>
       orderService.payOrder(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ORDER_KEYS }),
+  });
+}
+
+/** Week 21.2 — kitchen+ assigns a staff member; refreshes the board. */
+export function useAssignOrderStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, staffId }: { id: string; staffId: string }) =>
+      orderService.assignStaff(id, { staffId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ORDER_KEYS }),
+  });
+}
+
+/** Week 21.2 — kitchen+ clears the assignment; refreshes the board. */
+export function useUnassignOrderStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => orderService.unassignStaff(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ORDER_KEYS }),
   });
 }
