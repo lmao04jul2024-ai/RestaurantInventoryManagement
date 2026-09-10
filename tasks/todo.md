@@ -1,3 +1,52 @@
+# Session 2026-09-10 — Visual rebrand + admin-login fix + CSS pipeline fix
+
+## 1. Warm Hospitality visual refresh (user-requested, out-of-roadmap)
+- Primary blue→orange #EA580C (Tailwind orange scale), stone surfaces/grays, radius 8→12/16, layered warm shadows + glow, selection/scrollbars, keyframes.
+- Lockstep: shared/tokens.ts ↔ web globals.css ↔ lib/theme.ts (classic='Classic Amber') ↔ theme-editor/switcher defaults ↔ 5 web spec files ↔ shared index.spec dark anchor.
+- Primitives: Button (shadow/lift/press), Card (+hoverable), Input (ring-4 soft), Alert (Heroicons chips).
+- Dashboard: warm hero band + staggered quick-link cards (tested strings preserved).
+- Verified: shared 31/31, web 149/149, api 332/332, next build clean.
+
+## 2. fix(api): admin login TENANT_REQUIRED (L052)
+- resolveTenant gated POST /auth/login → pre-login web could never resolve a tenant (no JWT/X-Tenant-ID/subdomain on localhost) → login impossible (chicken-and-egg).
+- login now resolves tenant FROM credentials: email-global findMany (+optional body tenantId pre-narrow) → bcrypt filter → 0=401 (+timing equalizer), >1=400 TENANT_AMBIGUOUS (documented in openapi), 1=tokens+runWithTenant.
+- /login + /forgot-password unwired from resolveTenant; /register stays gated (first-user-ADMIN safety).
+- New tests/auth-login.spec.ts (8 regression tests); security.spec live probe no longer pins tenant.
+
+## 3. fix(web): Tailwind was NEVER compiling — missing postcss.config.js (L053)
+- User screenshot showed raw unstyled HTML (default links/buttons; only raw CSS vars applied). No postcss.config.js ever existed (not in git history); autoprefixer not installed.
+- Added postcss.config.js (tailwindcss plugin). First rebuild was served from stale .next cache — rm -rf .next + rebuild → utilities verified (--tw- markers, preflight, .rounded-card).
+- Live verified via headless Chrome: button rgb(234,88,12), radius 12/16px, preflight no-underline links, flex auth shell, primary-700 brand panel.
+- NOTE: dev servers must be RESTARTED to pick up the new postcss config; run `npm run dev` fresh.
+
+## Excluded from commits (other-session noise, untouched)
+Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
+
+# Warm Hospitality Visual Refresh — Web (out-of-roadmap polish)
+
+## Context
+- HEAD dbad065 (Week 23 bookkeeping). Tracker 131/144; roadmap weeks complete — this is an ad-hoc visual polish task per user request.
+- User picked aesthetic: **Warm hospitality** — appetizing amber/orange palette, friendly rounded shapes, restaurant feel.
+- Test-safety verified: no spec asserts brandPalette hexes or theme-editor `#2563eb` defaults (shared spec uses `#3B82F6` only as converter sample; identity checks are self-referential).
+- Contract: palettes must stay byte-identical across shared → web (CSS triplets) → mobile (auto-maps from shared).
+
+## Palette decision
+- Primary: Tailwind orange scale (50 #FFF7ED … 600 #EA580C … 900 #7C2D12) — warm/appetizing.
+- Secondary: keep teal (#0D9488) — proven appetite-complementary pairing, minimal impact.
+- Surfaces/grays: blue-tinted gray → warm stone ladder; dark mode warms too.
+- Shape: radius 8→12px default, card 12→16px; layered warm-tinted shadow tiers + primary glow.
+
+## Plan
+- [ ] 1. Rebrand tokens: shared/tokens.ts brandPalette + light/dark semantic warm
+- [ ] 2. globals.css: warm triplets, radius/shadow tokens, selection/scrollbar/keyframes polish; tailwind.config.js shadow tiers + animations
+- [ ] 3. UI primitives: Button (gradient/lift/press), Card (+hoverable prop, non-breaking), Input, Alert (Heroicons, soft tones)
+- [ ] 4. Chrome: Header glass + Heroicon logo, Sidebar Heroicons + active indicator, UserMenu, Footer
+- [ ] 5. Dashboard index: gradient hero + icon-chip quick links
+- [ ] 6. Auth layout warm gradient panel; Shop header glass + cart badge
+- [ ] 7. Sync theme-editor/lib defaults to new brand (#ea580c)
+- [ ] 8. Verify: shared+web+mobile tests, next build, dev-server screenshot
+- [ ] 9. Logical feature commit; Memory push + [MEMORY BANK: UPDATED]
+
 # Week 23 — Documentation & Training Materials (23.1–23.6)
 
 ## Context
