@@ -20,7 +20,7 @@ describe('ThemeProvider + ThemeSwitcher — Week 13 switching mechanism', () => 
         <ThemeSwitcher />
       </ThemeProvider>,
     );
-    await waitFor(() => expect(varOf('--color-primary-600')).toBe('37 99 235'));
+    await waitFor(() => expect(varOf('--color-primary-600')).toBe('234 88 12'));
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
@@ -46,7 +46,7 @@ describe('ThemeProvider + ThemeSwitcher — Week 13 switching mechanism', () => 
     fireEvent.click(screen.getByRole('radio', { name: /custom/i }));
 
     const input = screen.getByLabelText(/primary/i) as HTMLInputElement;
-    await waitFor(() => expect(varOf('--color-primary-600')).toBe('37 99 235')); // default custom anchor
+    await waitFor(() => expect(varOf('--color-primary-600')).toBe('234 88 12')); // default custom anchor
     fireEvent.change(input, { target: { value: '#123456' } });
 
     await waitFor(() => expect(varOf('--color-primary-600')).toBe('18 52 86'));
@@ -61,8 +61,8 @@ describe('ThemeProvider + ThemeSwitcher — Week 13 switching mechanism', () => 
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
 
     await waitFor(() => expect(document.documentElement.getAttribute('data-theme')).toBe('dark'));
-    expect(varOf('--color-surface')).toBe('17 24 39');
-    expect(varOf('--color-content-default')).toBe('249 250 251');
+    expect(varOf('--color-surface')).toBe('28 25 23');
+    expect(varOf('--color-content-default')).toBe('250 250 249');
   });
 });
 

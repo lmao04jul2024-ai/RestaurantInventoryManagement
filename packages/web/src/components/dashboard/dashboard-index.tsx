@@ -55,20 +55,41 @@ export default function DashboardIndex() {
   const links = ROLE_LINKS[role] ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Good day, {user?.firstName ?? 'there'} 👋</h1>
-        <p className="mt-1 text-sm text-content-muted">
-          Your {role.toLowerCase()} workspace — quick links below are tailored to your role.
-        </p>
-      </div>
+    <div className="space-y-8">
+      {/* Warm hero band */}
+      <section
+        className="relative overflow-hidden rounded-card shadow-lg animate-slide-up bg-primary-600"
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle at 85% 15%, white 0%, transparent 45%)' }}
+        />
+        <div className="relative px-6 py-10 text-white sm:px-8">
+          <p className="text-sm font-semibold uppercase tracking-wider opacity-80">Restaurant Manager</p>
+          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Good day, {user?.firstName ?? 'there'} 👋</h1>
+          <p className="mt-2 max-w-lg opacity-90">
+            Your {role.toLowerCase()} workspace — quick links below are tailored to your role.
+          </p>
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {links.map((link) => (
-          <Link key={link.href} href={link.href} className="transition-shadow hover:shadow-card">
-            <Card>
-              <span aria-hidden className="text-xl">{link.icon}</span>
-              <h2 className="mt-2 font-semibold">{link.label}</h2>
+        {links.map((link, i) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="group rounded-card animate-slide-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+            style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
+          >
+            <Card hoverable>
+              <span
+                aria-hidden
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-xl transition-transform duration-200 group-hover:scale-110"
+              >
+                {link.icon}
+              </span>
+              <h2 className="mt-3 font-semibold text-content-default">{link.label}</h2>
               <p className="mt-1 text-sm text-content-muted">{link.desc}</p>
             </Card>
           </Link>

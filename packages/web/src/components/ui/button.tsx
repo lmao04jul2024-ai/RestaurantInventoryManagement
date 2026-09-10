@@ -12,18 +12,21 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500',
+  primary:
+    'bg-primary-600 text-white shadow-sm shadow-primary-600/25 hover:bg-primary-700 hover:shadow-md hover:shadow-primary-600/25 focus-visible:ring-primary-500',
   secondary:
-    'bg-secondary-600 text-white hover:bg-secondary-700 focus-visible:ring-secondary-500',
+    'bg-secondary-600 text-white shadow-sm shadow-secondary-600/25 hover:bg-secondary-700 hover:shadow-md hover:shadow-secondary-600/25 focus-visible:ring-secondary-500',
   outline:
-    'border border-gray-300 bg-transparent text-content-default hover:bg-gray-50 focus-visible:ring-gray-400',
-  ghost: 'bg-transparent hover:bg-gray-100 focus-visible:ring-gray-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
+    'border border-gray-200 bg-surface text-content-default shadow-sm hover:border-primary-300 hover:bg-primary-50/60 hover:text-primary-700 focus-visible:ring-primary-400',
+  ghost:
+    'bg-transparent text-content-default hover:bg-gray-100 hover:text-primary-700 focus-visible:ring-gray-400',
+  danger:
+    'bg-red-600 text-white shadow-sm shadow-red-600/25 hover:bg-red-700 hover:shadow-md hover:shadow-red-600/25 focus-visible:ring-red-500',
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-sm',
+  sm: 'px-3.5 py-2 text-sm',
+  md: 'px-5 py-2.5 text-sm',
   lg: 'px-6 py-3 text-base',
 };
 
@@ -35,9 +38,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || isLoading}
-      className={`inline-flex items-center justify-center gap-2 font-medium rounded transition-colors
+      className={`inline-flex items-center justify-center gap-2 font-medium rounded transition-all duration-200
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-        disabled:opacity-50 disabled:pointer-events-none
+        active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none
         ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >

@@ -10,7 +10,7 @@ describe('ThemePreviewCard — Week 17.6 scoped live preview', () => {
     expect(screen.getByText('Margherita Pizza')).toBeInTheDocument();
 
     const scope = screen.getByTestId('preview-scope') as HTMLElement;
-    expect(scope.style.getPropertyValue('--color-primary-600')).toBe('37 99 235');
+    expect(scope.style.getPropertyValue('--color-primary-600')).toBe('234 88 12');
     // Draft-only font default: no brand font var emitted.
     expect(scope.style.getPropertyValue('--font-family-sans')).toBe('');
   });
@@ -26,7 +26,7 @@ describe('ThemePreviewCard — Week 17.6 scoped live preview', () => {
     const scope = screen.getByTestId('preview-scope') as HTMLElement;
     expect(scope.style.getPropertyValue('--color-primary-600')).toBe('18 52 86');
     expect(scope.style.getPropertyValue('--color-secondary-600')).toBe('171 205 239');
-    expect(scope.style.getPropertyValue('--color-surface')).toBe('17 24 39');
+    expect(scope.style.getPropertyValue('--color-surface')).toBe('28 25 23');
     expect(screen.getByText('Dark surfaces')).toBeInTheDocument();
 
     // Isolation: drafting must never leak palette vars into :root.
@@ -67,9 +67,9 @@ describe('ThemePreviewCard — Week 17.6 scoped live preview', () => {
     render(<ThemePreviewCard draft={{ preset: 'custom', mode: 'light' }} restaurantName="Casa Mia" />);
 
     // Invalid custom doc → DEFAULT_THEME_PREFS (classic/system) drives the vars,
-    // so the 600 anchor lands back on the classic blue.
+    // so the 600 anchor lands back on the classic amber.
     const scope = screen.getByTestId('preview-scope') as HTMLElement;
-    expect(scope.style.getPropertyValue('--color-primary-600')).toBe('37 99 235');
+    expect(scope.style.getPropertyValue('--color-primary-600')).toBe('234 88 12');
     expect(scope.style.getPropertyValue('--color-secondary-600')).toBe('13 148 136');
   });
 });

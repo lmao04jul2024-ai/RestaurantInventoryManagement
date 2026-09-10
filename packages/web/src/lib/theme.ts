@@ -3,7 +3,7 @@
  * 13.5 base templates, 13.6 persistence helpers).
  *
  * Single source of truth for every `--color-*` variable globals.css consumes
- * through tailwind.config.js. Values are raw RGB triplets ("37 99 235") so
+ * through tailwind.config.js. Values are raw RGB triplets ("234 88 12") so
  * Tailwind opacity utilities keep working. Everything here is pure and
  * unit-testable; the provider (theme-provider.tsx) just applies the output.
  */
@@ -59,11 +59,6 @@ const STEPS: ShadeStep[] = ['50', '100', '200', '300', '400', '500', '600', '700
 // ── 13.5 Base theme templates ────────────────────────────────────────────────
 // Brand palettes (Tailwind constants) — surfaces are shared, mode picks them.
 
-const BLUE: Palette = {
-  50: '239 246 255', 100: '219 234 254', 200: '191 219 254', 300: '147 197 253',
-  400: '96 165 250', 500: '59 130 246', 600: '37 99 235', 700: '29 78 216',
-  800: '30 64 175', 900: '30 58 138',
-};
 const TEAL: Palette = {
   50: '240 253 250', 100: '204 251 241', 200: '153 246 228', 300: '94 234 212',
   400: '45 212 191', 500: '20 184 166', 600: '13 148 136', 700: '15 118 110',
@@ -97,7 +92,7 @@ export interface ThemePreset {
 }
 
 export const PRESETS: Record<Exclude<PresetId, 'custom'>, ThemePreset> = {
-  classic: { name: 'Classic Blue', primary: BLUE, secondary: TEAL },
+  classic: { name: 'Classic Amber', primary: ORANGE, secondary: TEAL },
   emerald: { name: 'Emerald', primary: EMERALD, secondary: AMBER },
   sunset: { name: 'Sunset', primary: ORANGE, secondary: VIOLET },
 };
@@ -106,31 +101,31 @@ export const PRESETS: Record<Exclude<PresetId, 'custom'>, ThemePreset> = {
 
 const LIGHT_SURFACES: Record<string, string> = {
   '--color-surface': '255 255 255',
-  '--color-surface-muted': '249 250 251',
-  '--color-content-default': '17 24 39',
-  '--color-content-muted': '107 114 128',
+  '--color-surface-muted': '250 250 249',
+  '--color-content-default': '28 25 23',
+  '--color-content-muted': '120 113 108',
 };
 const DARK_SURFACES: Record<string, string> = {
-  '--color-surface': '17 24 39',
-  '--color-surface-muted': '31 41 55',
-  '--color-content-default': '249 250 251',
-  '--color-content-muted': '156 163 175',
+  '--color-surface': '28 25 23',
+  '--color-surface-muted': '41 37 36',
+  '--color-content-default': '250 250 249',
+  '--color-content-muted': '168 162 158',
 };
 
-/** Tailwind cool-gray ladder, mapped to vars so every gray-* utility flips. */
+/** Warm stone ladder, mapped to vars so every gray-* utility flips. */
 export const GRAYS_LIGHT: Record<string, string> = {
-  '--color-gray-50': '249 250 251', '--color-gray-100': '243 244 246',
-  '--color-gray-200': '229 231 235', '--color-gray-300': '209 213 219',
-  '--color-gray-400': '156 163 175', '--color-gray-500': '107 114 128',
-  '--color-gray-600': '75 85 99', '--color-gray-700': '55 65 81',
-  '--color-gray-800': '31 41 55', '--color-gray-900': '17 24 39',
+  '--color-gray-50': '250 250 249', '--color-gray-100': '245 245 244',
+  '--color-gray-200': '231 229 228', '--color-gray-300': '214 211 209',
+  '--color-gray-400': '168 162 158', '--color-gray-500': '120 113 108',
+  '--color-gray-600': '87 83 78', '--color-gray-700': '68 64 60',
+  '--color-gray-800': '41 37 36', '--color-gray-900': '28 25 23',
 };
 export const GRAYS_DARK: Record<string, string> = {
-  '--color-gray-50': '31 41 55', '--color-gray-100': '31 41 55',
-  '--color-gray-200': '55 65 81', '--color-gray-300': '75 85 99',
-  '--color-gray-400': '107 114 128', '--color-gray-500': '156 163 175',
-  '--color-gray-600': '156 163 175', '--color-gray-700': '209 213 219',
-  '--color-gray-800': '229 231 235', '--color-gray-900': '243 244 246',
+  '--color-gray-50': '41 37 36', '--color-gray-100': '41 37 36',
+  '--color-gray-200': '68 64 60', '--color-gray-300': '87 83 78',
+  '--color-gray-400': '120 113 108', '--color-gray-500': '168 162 158',
+  '--color-gray-600': '168 162 158', '--color-gray-700': '214 211 209',
+  '--color-gray-800': '231 229 228', '--color-gray-900': '245 245 244',
 };
 
 // ── 13.3 Custom palette generation (hex → 50–900 shade ladder) ──────────────
@@ -205,7 +200,7 @@ export function resolveIsDark(mode: ThemeMode, systemPrefersDark: boolean): bool
 
 function paletteFor(prefs: ThemePrefs): { primary: Palette; secondary: Palette } {
   if (prefs.preset === 'custom') {
-    const c = prefs.custom ?? { primary: '#2563eb', secondary: '#0d9488' };
+    const c = prefs.custom ?? { primary: '#ea580c', secondary: '#0d9488' };
     return { primary: buildPalette(c.primary), secondary: buildPalette(c.secondary) };
   }
   const preset = PRESETS[prefs.preset];

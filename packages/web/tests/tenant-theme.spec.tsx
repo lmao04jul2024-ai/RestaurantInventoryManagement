@@ -70,7 +70,7 @@ describe('ThemeProvider — Week 17 tenant branding fallback', () => {
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(varOf('--color-primary-600')).toBe('37 99 235'));
+    await waitFor(() => expect(varOf('--color-primary-600')).toBe('234 88 12'));
     expect(getMyTenantFn).not.toHaveBeenCalled();
   });
 });

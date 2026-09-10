@@ -74,7 +74,7 @@ describe('semantic palettes', () => {
   it('light and dark surfaces differ at the documented anchors', () => {
     expect(lightSemanticColors.surface).not.toBe(darkSemanticColors.surface);
     expect(lightSemanticColors.surface).toBe('#FFFFFF');
-    expect(darkSemanticColors.surface).toBe('#111827');
+    expect(darkSemanticColors.surface).toBe('#1C1917');
   });
 });
 

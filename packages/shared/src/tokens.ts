@@ -23,19 +23,19 @@ export interface ColorScale {
   900: string;
 }
 
-/** Brand palettes (Tailwind default blue / teal — match globals.css exactly) */
+/** Brand palettes (Tailwind constants — match globals.css exactly) */
 export const brandPalette = {
   primary: {
-    50: '#EFF6FF',
-    100: '#DBEAFE',
-    200: '#BFDBFE',
-    300: '#93C5FD',
-    400: '#60A5FA',
-    500: '#3B82F6',
-    600: '#2563EB',
-    700: '#1D4ED8',
-    800: '#1E40AF',
-    900: '#1E3A8A',
+    50: '#FFF7ED',
+    100: '#FFEDD5',
+    200: '#FED7AA',
+    300: '#FDBA74',
+    400: '#FB923C',
+    500: '#F97316',
+    600: '#EA580C',
+    700: '#C2410C',
+    800: '#9A3412',
+    900: '#7C2D12',
   },
   secondary: {
     50: '#F0FDFA',
@@ -64,16 +64,16 @@ export interface SemanticColors {
 
 export const lightSemanticColors: SemanticColors = {
   surface: '#FFFFFF',
-  surfaceMuted: '#F9FAFB',
-  contentDefault: '#111827',
-  contentMuted: '#6B7280',
+  surfaceMuted: '#FAFAF9',
+  contentDefault: '#1C1917',
+  contentMuted: '#78716C',
 };
 
 export const darkSemanticColors: SemanticColors = {
-  surface: '#111827',
-  surfaceMuted: '#1F2937',
-  contentDefault: '#F9FAFB',
-  contentMuted: '#9CA3AF',
+  surface: '#1C1917',
+  surfaceMuted: '#292524',
+  contentDefault: '#FAFAF9',
+  contentMuted: '#A8A29E',
 };
 
 /** Functional colors shared by every platform (web has no vars for these yet) */

@@ -30,11 +30,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           aria-invalid={!!error}
           aria-describedby={describedBy}
-          className={`block w-full rounded border px-3 py-2.5 text-sm placeholder:text-gray-400
-            focus:outline-none focus:ring-2 focus:ring-offset-0
+          className={`block w-full rounded border bg-surface px-3.5 py-2.5 text-sm shadow-sm
+            placeholder:text-gray-400 transition-colors
+            focus:outline-none focus:ring-4
             ${error
-              ? 'border-red-400 focus:border-red-500 focus:ring-red-200'
-              : 'border-gray-300 focus:border-primary-500 focus:ring-primary-200'}
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-500/15'
+              : 'border-gray-200 hover:border-gray-300 focus:border-primary-500 focus:ring-primary-500/15'}
             ${className}`}
           {...props}
         />

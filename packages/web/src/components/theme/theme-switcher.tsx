@@ -4,7 +4,7 @@ import { useTheme } from '@/components/theme/theme-provider';
 import { PRESETS, type PresetId, type ThemeMode } from '@/lib/theme';
 
 const PRESET_OPTIONS: Array<{ id: PresetId; label: string; swatch: string }> = [
-  { id: 'classic', label: 'Classic', swatch: '#2563eb' },
+  { id: 'classic', label: 'Classic', swatch: '#ea580c' },
   { id: 'emerald', label: 'Emerald', swatch: '#059669' },
   { id: 'sunset', label: 'Sunset', swatch: '#ea580c' },
   { id: 'custom', label: 'Custom', swatch: 'linear-gradient(135deg,#ef4444,#8b5cf6)' },
@@ -22,7 +22,7 @@ const SEGMENT =
 /** Week 13.4 — theme switching UI (presets, mode, custom brand colors). */
 export default function ThemeSwitcher() {
   const { prefs, setPreset, setMode, setCustom } = useTheme();
-  const custom = prefs.custom ?? { primary: '#2563eb', secondary: '#0d9488' };
+  const custom = prefs.custom ?? { primary: '#ea580c', secondary: '#0d9488' };
 
   return (
     <div className="space-y-4">

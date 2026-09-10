@@ -19,11 +19,11 @@ const LIGHT: Parameters<typeof buildCssVariables>[0] = { preset: 'classic', mode
 describe('theme lib — Week 13 design tokens & CSS-var generation', () => {
   it('builds the full classic/light variable set matching globals.css defaults', () => {
     const vars = buildCssVariables(LIGHT, false);
-    expect(vars['--color-primary-600']).toBe('37 99 235');
+    expect(vars['--color-primary-600']).toBe('234 88 12');
     expect(vars['--color-secondary-600']).toBe('13 148 136');
     expect(vars['--color-surface']).toBe('255 255 255');
-    expect(vars['--color-content-muted']).toBe('107 114 128');
-    expect(vars['--color-gray-300']).toBe('209 213 219');
+    expect(vars['--color-content-muted']).toBe('120 113 108');
+    expect(vars['--color-gray-300']).toBe('214 211 209');
     for (const step of ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'] as ShadeStep[]) {
       expect(vars[`--color-primary-${step}`]).toBeDefined();
       expect(vars[`--color-secondary-${step}`]).toBeDefined();
@@ -33,10 +33,10 @@ describe('theme lib — Week 13 design tokens & CSS-var generation', () => {
 
   it('flips surfaces & grays in dark mode but keeps brand palettes', () => {
     const vars = buildCssVariables({ preset: 'classic', mode: 'dark' }, false);
-    expect(vars['--color-surface']).toBe('17 24 39');
-    expect(vars['--color-content-default']).toBe('249 250 251');
-    expect(vars['--color-gray-300']).toBe('75 85 99');
-    expect(vars['--color-primary-600']).toBe('37 99 235');
+    expect(vars['--color-surface']).toBe('28 25 23');
+    expect(vars['--color-content-default']).toBe('250 250 249');
+    expect(vars['--color-gray-300']).toBe('87 83 78');
+    expect(vars['--color-primary-600']).toBe('234 88 12');
   });
 
   it('resolveIsDark covers the mode × OS matrix', () => {
