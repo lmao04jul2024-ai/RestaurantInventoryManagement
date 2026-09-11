@@ -105,6 +105,24 @@ body {
   color: rgb(var(--color-primary-900));
 }
 
+/*
+ * Native form controls — bind <select> (and its open option list) to the
+ * surface/content tokens instead of relying on inheritance. Inheritance alone
+ * is unreliable across browsers/OSes (a light OS-drawn drop-down combined with
+ * dark-mode's light inherited text renders white-on-white). Because these tokens
+ * always contrast (light surface + dark text; dark surface + light text), this
+ * keeps selects legible in both modes. Component utility classes still win where
+ * present (they have higher specificity).
+ */
+select {
+  color: rgb(var(--color-content-default));
+  background-color: rgb(var(--color-surface));
+}
+select option {
+  color: rgb(var(--color-content-default));
+  background-color: rgb(var(--color-surface));
+}
+
 /* Slim, warm scrollbars (WebKit + Firefox) */
 * {
   scrollbar-width: thin;
