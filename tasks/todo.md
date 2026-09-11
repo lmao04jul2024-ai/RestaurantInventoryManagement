@@ -22,6 +22,13 @@
 ## Excluded from commits (other-session noise, untouched)
 Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
 
+# Session 2026-09-11 — Configuration lockout investigation + dark-mode select fix
+
+## 3. fix(web): dark-mode <select> white-on-white
+- Symptom: "<select> text and bg are both white in dark mode". Verified every token-based select renders high-contrast in dark Chrome (bg `rgb(28,25,23)`, fg `rgb(250,250,249)`) — the failure is browsers/OSes combining dark-mode light inherited text with a light OS-drawn control/drop-down.
+- Fix: globals.css adds `select, select option { color: var(--color-content-default); background-color: var(--color-surface) }` (minifier merges to one rule; verified present in served CSS). High-specificity utility classes still win on components.
+- Verified: web 151/151; rebuilt web image, recreated `restaurant-web` container, served CSS confirmed (commit 79defeb).
+
 # Session 2026-09-11 — Settings lockout after plan change (investigation + self-lockout fix)
 
 ## 1. Investigation: "changed Plan PRO → TRIAL, cannot access settings"

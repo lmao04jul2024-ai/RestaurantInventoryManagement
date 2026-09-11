@@ -1,4 +1,9 @@
 # Lessons Learned
+## L055 — Native <select> must set an explicit token color (dark-mode inheritance is unreliable)
+- **Date:** 2026-09-11
+- **Symptom:** User reported "<select> text and bg are both white" in dark mode. Computed-style sweep of every select in dark Chrome showed high contrast everywhere (bg `rgb(28,25,23)`, fg `rgb(250,250,249)`) — i.e. the closed control was fine; the native drop-down/OS-drawn control is where light inherited text meets a light background on some browsers/OSes.
+- **Fix:** `globals.css` — `select, select option { color: var(--color-content-default); background-color: var(--color-surface) }`. The tokens are an always-contrast pair, so it covers light + dark. Utility classes (higher specificity) still win on components.
+- **Rule:** Native form controls (select/option) should never rely on `color` inheritance for dark-mode legibility; bind them to semantic tokens explicitly.
 
 ## L001 — Task Termination memory push was skipped
 - **Date:** 2026-08-27
