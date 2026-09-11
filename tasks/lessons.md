@@ -5,6 +5,8 @@
 - **Pattern:** A previous task concluded without updating the Memory MCP (project snapshot / architectural decisions were never persisted). CRITICAL FAULT logged by the rules system.
 - **Rule going forward:** Before presenting any final result, ALWAYS run the termination sequence: update Memory MCP (decisions, snapshot, preferences, lessons) → verify success → append `[MEMORY BANK: UPDATED]`. No exceptions, even for small fixes.
 - **Check:** If my final message lacks `[MEMORY BANK: UPDATED]`, the task is not complete.
+- **Recurrence note (2026-09-11):** The rules system flagged the fault again on the session prior to this one. Termination push was executed FIRST-class this time (memory entity + project snapshot observations + lessons append) before presenting the final result.
+
 
 ## L002 — Prisma client missing in npm-workspaces monorepos
 - **Date:** 2026-08-27
