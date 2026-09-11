@@ -74,7 +74,7 @@ export default function CustomerMenu() {
   const chipClasses = (active: boolean) =>
     `rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
       active
-        ? 'bg-primary-600 text-white'
+        ? 'bg-primary-600 text-on-primary'
         : 'border border-gray-200 bg-surface text-content-muted hover:bg-gray-50'
     }`;
 
@@ -107,7 +107,7 @@ export default function CustomerMenu() {
               onClick={() => toggleDietary(f.key)}
               className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                 dietary[f.key]
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-600 text-on-primary'
                   : 'border border-gray-200 bg-surface text-content-muted hover:bg-gray-50'
               }`}
             >

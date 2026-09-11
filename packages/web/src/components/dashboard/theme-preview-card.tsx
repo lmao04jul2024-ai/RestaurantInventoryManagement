@@ -59,8 +59,8 @@ export default function ThemePreviewCard({ draft, restaurantName }: ThemePreview
           </div>
           <p className="mt-1 text-xs text-content-muted">San Marzano tomato · fior di latte · basil</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white">Add to cart</span>
-            <span className="rounded bg-secondary-600 px-3 py-1.5 text-xs font-semibold text-white">Chef&apos;s pick</span>
+            <span className="rounded bg-primary-600 px-3 py-1.5 text-xs font-semibold text-on-primary">Add to cart</span>
+            <span className="rounded bg-secondary-600 px-3 py-1.5 text-xs font-semibold text-on-secondary">Chef&apos;s pick</span>
           </div>
           <div className="mt-3 flex gap-1.5" aria-hidden>
             <span className="h-1.5 flex-1 rounded-full bg-primary-200" />

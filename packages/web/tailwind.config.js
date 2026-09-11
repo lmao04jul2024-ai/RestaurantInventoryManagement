@@ -42,6 +42,9 @@ module.exports = {
           900: 'rgb(var(--color-secondary-900) / <alpha-value>)',
           DEFAULT: 'rgb(var(--color-secondary-600) / <alpha-value>)',
         },
+        // Contrast-aware text color for brand fills (custom light brands → dark text)
+        'on-primary': 'rgb(var(--color-on-primary) / <alpha-value>)',
+        'on-secondary': 'rgb(var(--color-on-secondary) / <alpha-value>)',
         // Semantic tokens — safe zone for tenant overrides
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
         'surface-muted': 'rgb(var(--color-surface-muted) / <alpha-value>)',

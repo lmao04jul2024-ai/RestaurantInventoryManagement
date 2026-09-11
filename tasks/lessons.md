@@ -164,3 +164,31 @@ A re-check request exposed that prior session summaries claimed Week 23 "Offline
 - **Contributing cause:** the session also left uncommitted, unverified working-tree noise (untested Prisma ^5→^7 bump + prisma.config.ts, node:22 Dockerfile, web tsconfig excluding tests/specs from tsc, deleted root package-lock.json, stray `grep` file) and partially-fictional docs — suggesting the session ended abruptly mid-verification.
 - **Rule:** the termination sequence (memory push → verify → `[MEMORY BANK: UPDATED]`) runs BEFORE the final message on every task, same as L001. If a session must end early, push an interim snapshot marking state as "in progress" rather than pushing nothing.
 - **Recovered:** L051 logged at Week 23 start; Week 22 snapshot pushed retroactively alongside the Week 23 close.
+
+## L052 — resolveTenant must never gate credential-entry auth routes
+- **Date:** 2026-09-10
+- **Symptom:** Every web admin login failed with `TENANT_REQUIRED` (400).
+- **Root cause:** `POST /api/auth/login` was wired `resolveTenant → login`, but a pre-login browser has no JWT (and the route never parsed one), sends no `X-Tenant-ID`, and dev has no subdomain (`extractSubdomain` skips localhost) — tenant could NEVER resolve. Chicken-and-egg: authentication is one of the four tenant-resolution sources, so requiring it before login is unsatisfiable.
+- **Fix:** login/forgot-password resolve the tenant FROM the credentials (email-global `findMany` → bcrypt filter; 0=401 + bcrypt timing-equalizer; >1=400 `TENANT_AMBIGUOUS`; 1=tokens+`runWithTenant`). `/register` STAYS resolveTenant-gated (first-user-becomes-ADMIN must never run without a resolved tenant). The Prisma ALS guard passes through when no context exists, so controller-level scoping is the responsibility of the handler — verified safe pattern.
+- **Rule:** Any route reachable by an UNAUTHENTICATED first-time visitor must not depend on tenant resolution unless the client provably knows the tenant (subdomain in prod, org code in form). Regression net: `tests/auth-login.spec.ts` (8 tests, incl. the no-hints login case).
+- **Tooling notes:** Joi `loginSchema` requires `tenantId` to be a GUID and its email regex rejects `.test` TLDs — fixtures use `example.com` + UUIDs. `MockRes.json` does not set `statusCode` — controller success paths that call bare `res.json()` must be asserted via `res.body`, not `statusCode`.
+
+## L053 — A missing postcss.config.js silently kills Tailwind (styling looks "plain", not broken)
+- **Date:** 2026-09-10
+- **Symptom:** Web app rendered with raw browser-default styling: underlined blue links, default buttons, no layout — while SOME theme colors applied (dark warm body background).
+- **Diagnosis signature:** Raw `body{}` rules from globals.css still applying + ALL Tailwind utilities/preflight missing = `@tailwind` directives never processed. Root cause: **no `postcss.config.js` existed** (never committed), so Next.js never ran the tailwindcss plugin. `autoprefixer` also absent from the lockfile.
+- **Verification gotcha #1:** Grepping the emitted CSS for `shadow-card`/`rounded-card` is a FALSE POSITIVE — the raw `:root{--shadow-card:...}` variable declaration from globals.css matches. Real markers: `--tw-` custom properties (preflight block) and `box-sizing:border-box` reset.
+- **Verification gotcha #2:** After adding postcss.config.js, the first `next build` still served stale CSS from the cached `.next` — `rm -rf .next` then rebuild, and beware concurrently-running dev servers writing to the same `.next`.
+- **Fix:** `packages/web/postcss.config.js` with `{ plugins: { tailwindcss: {} } }` (autoprefixer deliberately NOT added now — package-lock.json is dirty from another session; installing would entangle it. Modern browser targets make it non-blocking; add it during the next legitimate dependency change).
+- **Rule:** When styling looks "only partially applied", diff WHICH rules apply: raw-CSS-only ⇒ build pipeline problem (postcss/config/cache), not a tokens problem. Live-verify with headless Chrome computed styles (getComputedStyle), never screenshots alone.
+
+## Process note — never batch sequential git commits in one parallel tool batch
+- 2026-09-10: Four `git add+commit` commands emitted as parallel calls raced on `.git/index.lock` (one succeeded, three failed). Dependent commands (anything mutating shared state like a git index) must be chained with `&&` in a SINGLE command string.
+
+## L054 — Dark-mode gray ladder must be an inverted scale, not a re-tint
+- **Date:** 2026-09-11
+- **Symptom:** After rebalancing `[data-theme='dark']` grays to "visible muted tints" (gray-50 = light `225 220 213`), `bg-gray-50/100`, `divide-gray-50/100`, `border-gray-100`, `hover:bg-gray-50` fills collapsed to near-white slabs on the dark surface, and `text-gray-300`/`text-gray-600` badge pairs lost contrast.
+- **Root cause:** Low-number gray steps are used as subtle fills/dividers/borders that must stay NEAR the dark surface; making them light breaks the fill/background hierarchy. High-number steps are used as text and must stay LIGHT.
+- **Fix:** Inverted stone scale in `globals.css` dark block: gray-50 `52 48 45` (subtle fill/hover) → gray-100 `68 64 60` (dividers) → gray-200 `87 83 78` (borders) → gray-300 `120 113 108` → gray-400 `150 143 135` → gray-500 `168 162 158` (= content-muted) → gray-600 `195 188 181` → gray-700 `214 211 209` → gray-800 `231 229 228` → gray-900 `245 245 244` (lightest text). Also fixed a dropped `border` class in `tenants-page.tsx` window group (`rounded border-gray-300` → `rounded border border-gray-300`) and prior modal/select `bg-white` → `bg-surface` fixes.
+- **Rule:** When theming a gray ladder for dark mode, preserve each step's ROLE (50/100 = fills/dividers near surface, 200/300 = borders, 400+ = text increasingly light). Never assign a light value to a low-number fill step.
+- **Verification:** `cd packages/web && npm test` → 28 suites / 151 tests green.

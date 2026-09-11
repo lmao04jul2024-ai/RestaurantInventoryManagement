@@ -85,7 +85,7 @@ export default function OrderDetail({ id }: { id: string }) {
                   <span
                     aria-current={current ? 'step' : undefined}
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                      done ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'
+                      done ? 'bg-primary-600 text-on-primary' : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     {done ? '✓' : i + 1}

@@ -16,7 +16,7 @@ export default function Home() {
           <div className="mt-8 space-x-4">
             <Link
               href="/login"
-              className="inline-block rounded bg-primary-600 px-6 py-3 font-medium text-white transition-colors hover:bg-primary-700"
+              className="inline-block rounded bg-primary-600 px-6 py-3 font-medium text-on-primary transition-colors hover:bg-primary-700"
             >
               Sign in
             </Link>

@@ -95,7 +95,7 @@ export default function MenuItemForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8">
-      <div className="w-full max-w-2xl rounded-card bg-white p-6 shadow-xl">
+      <div className="w-full max-w-2xl rounded-card bg-surface p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">{item ? 'Edit item' : 'New menu item'}</h2>
           <button
@@ -126,7 +126,7 @@ export default function MenuItemForm({
               </label>
               <select
                 {...register('categoryId')}
-                className="block w-full rounded border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
+                className="block w-full rounded border border-gray-300 bg-surface text-content-default px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>

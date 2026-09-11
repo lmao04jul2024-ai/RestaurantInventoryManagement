@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen">
       {/* Brand panel */}
-      <div className="hidden w-1/2 flex-col justify-between bg-primary-700 p-12 text-white lg:flex">
+      <div className="hidden w-1/2 flex-col justify-between bg-primary-700 p-12 text-on-primary lg:flex">
         <Link href="/" className="text-2xl font-bold tracking-tight">
           🍽️ Restaurant Manager
         </Link>

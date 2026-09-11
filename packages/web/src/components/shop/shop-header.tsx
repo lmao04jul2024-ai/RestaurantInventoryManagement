@@ -60,7 +60,7 @@ export default function ShopHeader() {
         >
           🛒 <span className="hidden sm:inline">Cart</span>
           {count > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
+            <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-on-primary">
               {count}
             </span>
           )}

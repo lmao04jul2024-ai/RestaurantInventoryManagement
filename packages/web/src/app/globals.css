@@ -33,6 +33,10 @@
   --color-secondary-800: 17 94 89;
   --color-secondary-900: 19 78 74;
 
+  /* Contrast-aware text colors for brand fills (overwritten by ThemeProvider) */
+  --color-on-primary: 255 255 255;
+  --color-on-secondary: 255 255 255;
+
   /* Semantic surfaces & text (light theme defaults — warm stone) */
   --color-surface: 255 255 255;
   --color-surface-muted: 250 250 249;
@@ -75,16 +79,18 @@
   --color-content-default: 250 250 249;
   --color-content-muted: 168 162 158;
 
-  --color-gray-50: 41 37 36;
-  --color-gray-100: 41 37 36;
-  --color-gray-200: 68 64 60;
-  --color-gray-300: 87 83 78;
-  --color-gray-400: 120 113 108;
-  --color-gray-500: 168 162 158;
-  --color-gray-600: 168 162 158;
-  --color-gray-700: 214 211 209;
-  --color-gray-800: 231 229 228;
-  --color-gray-900: 245 245 244;
+  /* ---- dark gray ladder: inverted stone scale so bg/divide/border/text utilities
+     stay subtle-but-visible on dark surfaces (50 = darkest tint, 900 = lightest) ---- */
+  --color-gray-50:  52 48 45;   /* subtle fill / hover on dark surface */
+  --color-gray-100: 68 64 60;   /* muted fill, dividers */
+  --color-gray-200: 87 83 78;   /* borders on dark */
+  --color-gray-300: 120 113 108;  /* medium borders */
+  --color-gray-400: 150 143 135;  /* secondary text / placeholders */
+  --color-gray-500: 168 162 158;  /* muted text (= content-muted) */
+  --color-gray-600: 195 188 181;  /* text on dark fills */
+  --color-gray-700: 214 211 209;  /* prominent light text */
+  --color-gray-800: 231 229 228;  /* lighter text */
+  --color-gray-900: 245 245 244;  /* lightest text */
 }
 
 body {

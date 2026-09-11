@@ -74,7 +74,7 @@ export default function CheckoutPage() {
         <p className="mt-1 text-sm text-content-muted">Browse the menu and add something tasty.</p>
         <Link
           href="/menu"
-          className="mt-6 inline-block rounded bg-primary-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-700"
+          className="mt-6 inline-block rounded bg-primary-600 px-6 py-2.5 text-sm font-medium text-on-primary hover:bg-primary-700"
         >
           Back to menu
         </Link>
@@ -168,7 +168,7 @@ export default function CheckoutPage() {
               onClick={() => setMethod(m.value)}
               className={`rounded px-4 py-2 text-sm font-medium transition-colors ${
                 method === m.value
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-600 text-on-primary'
                   : 'border border-gray-200 bg-surface text-content-muted hover:bg-gray-50'
               }`}
             >

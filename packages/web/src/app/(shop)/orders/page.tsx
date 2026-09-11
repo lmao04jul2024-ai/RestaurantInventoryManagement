@@ -45,7 +45,7 @@ export default function CustomerOrdersPage() {
             onClick={() => setStatus(f.value)}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               status === f.value
-                ? 'bg-primary-600 text-white'
+                ? 'bg-primary-600 text-on-primary'
                 : 'border border-gray-200 bg-surface text-content-muted hover:bg-gray-50'
             }`}
           >
@@ -67,7 +67,7 @@ export default function CustomerOrdersPage() {
           <p className="text-sm text-content-muted">No orders here yet.</p>
           <Link
             href="/menu"
-            className="mt-4 inline-block rounded bg-primary-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-700"
+            className="mt-4 inline-block rounded bg-primary-600 px-6 py-2.5 text-sm font-medium text-on-primary hover:bg-primary-700"
           >
             Browse the menu
           </Link>

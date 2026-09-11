@@ -192,6 +192,16 @@ export function buildPalette(hex: string): Palette {
   }, {} as Palette);
 }
 
+/**
+ * Picks a readable text color for a background: dark stone on light fills,
+ * white on dark fills (YIQ-style luminance threshold 160/255). Used for the
+ * `--color-on-primary` / `--color-on-secondary` tokens so buttons stay legible
+ * even when a tenant brands with a very light custom color (e.g. white).
+ */
+export function onColor(triplets: string): string {
+  return luminance(triplets) > 160 ? '28 25 23' : '255 255 255';
+}
+
 // ── Variable assembly ────────────────────────────────────────────────────────
 
 export function resolveIsDark(mode: ThemeMode, systemPrefersDark: boolean): boolean {
@@ -217,6 +227,10 @@ export function buildCssVariables(prefs: ThemePrefs, systemPrefersDark: boolean)
       acc[`--color-secondary-${step}`] = secondary[step];
       return acc;
     }, {} as Record<string, string>),
+    // Week 18 — contrast-aware text colors for brand fills (custom presets
+    // can pick near-white brand colors; text must stay legible).
+    '--color-on-primary': onColor(primary['600']),
+    '--color-on-secondary': onColor(secondary['600']),
     ...(dark ? DARK_SURFACES : LIGHT_SURFACES),
     ...(dark ? GRAYS_DARK : GRAYS_LIGHT),
     // Week 17 — brand font rides along with the palette (undefined = CSS default).

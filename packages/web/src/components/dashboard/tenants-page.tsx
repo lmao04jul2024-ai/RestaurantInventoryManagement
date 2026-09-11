@@ -64,7 +64,7 @@ function toForm(tenant: TenantProfile): ProfileForm {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-card border border-gray-100 bg-surface p-4 shadow-card">
+    <div className="rounded-card border border-gray-200 bg-surface p-4 shadow-card">
       <p className="text-xs font-semibold uppercase tracking-wide text-content-muted">{label}</p>
       <p className="mt-1 text-2xl font-bold text-content-default">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-content-muted">{sub}</p>}
@@ -285,7 +285,7 @@ export default function TenantsPage() {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Usage</h2>
-          <div role="group" aria-label="Analytics window" className="flex gap-1 rounded border border-gray-200 p-1">
+          <div role="group" aria-label="Analytics window" className="flex gap-1 rounded border border-gray-300 bg-surface-muted p-1">
             {WINDOWS.map((w) => (
               <button
                 key={w}
@@ -293,7 +293,7 @@ export default function TenantsPage() {
                 onClick={() => setDays(w)}
                 aria-pressed={days === w}
                 className={`rounded px-3 py-1 text-xs font-medium ${
-                  days === w ? 'bg-primary-600 text-white' : 'text-content-muted hover:bg-surface-muted'
+                  days === w ? 'bg-primary-600 text-on-primary' : 'text-content-muted hover:bg-surface-muted'
                 }`}
               >
                 {w}d

@@ -25,7 +25,7 @@ const SORT_OPTIONS: Array<{ value: NonNullable<MenuItemListQuery['sort']>; label
 ];
 
 const selectCls =
-  'rounded border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200';
+  'rounded border border-gray-300 bg-surface text-content-default px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200';
 
 export default function MenuPage() {
   const { data: menus } = useMenus();

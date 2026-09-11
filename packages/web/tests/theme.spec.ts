@@ -5,6 +5,7 @@ import {
   isValidThemePrefs,
   loadThemePrefs,
   luminance,
+  onColor,
   parseStoredTheme,
   resolveIsDark,
   saveThemePrefs,
@@ -106,8 +107,30 @@ describe('theme lib — persistence (13.6)', () => {
   });
 });
 
-describe('theme lib — Week 17 brand fonts & tenant mapping', () => {
-  it('emits the font variable only when a brand font is set', () => {
+describe('theme lib — on-brand contrast tokens (white-on-white fix)', () => {
+  it('onColor picks dark text for light fills and white for dark fills', () => {
+    expect(onColor('255 255 255')).toBe('28 25 23'); // white brand → dark text
+    expect(onColor('231 229 228')).toBe('28 25 23'); // near-white → dark text
+    expect(onColor('234 88 12')).toBe('255 255 255'); // classic primary → white text
+    expect(onColor('18 52 86')).toBe('255 255 255'); // dark navy → white text
+    expect(onColor('28 25 23')).toBe('255 255 255');
+  });
+
+  it('emits --color-on-primary/-secondary that match the brand fill', () => {
+    const classic = buildCssVariables(LIGHT, false);
+    expect(classic['--color-on-primary']).toBe('255 255 255');
+
+    const whiteBrand = buildCssVariables(
+      { preset: 'custom', mode: 'light', custom: { primary: '#ffffff', secondary: '#eeeeee' } },
+      false,
+    );
+    expect(whiteBrand['--color-primary-600']).toBe('255 255 255');
+    expect(whiteBrand['--color-on-primary']).toBe('28 25 23');
+    expect(whiteBrand['--color-on-secondary']).toBe('28 25 23');
+  });
+});
+
+describe('theme lib — Week 17 brand fonts & tenant mapping', () => {  it('emits the font variable only when a brand font is set', () => {
     const noFont = buildCssVariables(LIGHT, false);
     expect(noFont['--font-family-sans']).toBeUndefined();
 
