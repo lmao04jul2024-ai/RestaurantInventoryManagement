@@ -89,6 +89,7 @@ Feature-flagged routes fail **closed** with `403 FEATURE_DISABLED`.
 | `UNAUTHENTICATED` | 401 | Missing/expired token |
 | `FORBIDDEN_PERMISSION` | 403 | Authenticated but lacking permission (or deny-override) |
 | `TENANT_MISMATCH` | 403 | Header/query tenant disagrees with JWT |
+| `WORKSPACE_INACTIVE` | 403 | Tenant deactivated — members keep GET/PATCH `/api/tenants/me` to re-enable "Workspace active"; every other surface is blocked |
 | `FEATURE_DISABLED` | 403 | Feature flag off for this tenant |
 | `ORDER_NOT_FOUND` etc. | 404 | Resource absent **or** cross-tenant (indistinguishable) |
 | `INSUFFICIENT_LOYALTY` | 409 | Redemption exceeded balance |

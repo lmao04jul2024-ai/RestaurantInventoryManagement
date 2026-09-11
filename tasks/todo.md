@@ -22,6 +22,22 @@
 ## Excluded from commits (other-session noise, untouched)
 Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
 
+# Session 2026-09-11 — Settings lockout after plan change (investigation + self-lockout fix)
+
+## 1. Investigation: "changed Plan PRO → TRIAL, cannot access settings"
+- Live-reproduced the full journey (login → PATCH plan TRIAL → settings): **plan downgrades do NOT block settings** — verified API (200s) and rendered web UI.
+- Root cause of the reported symptom: the settings form's **"Workspace active" (`isActive`)** checkbox lives in the same save payload; `resolveTenant` filtered `isActive: true`, so an inactive tenant → every request 404 `TENANT_NOT_FOUND` (incl. PATCH → **no UI recovery**; login still worked).
+- Infra note: docker compose (postgres 5433 / redis 6379) was DOWN at session start; started via Docker.app + `docker compose up -d postgres redis`; API on 3001 and web on 3000 started in background (logs /tmp/api-dev.log, /tmp/web-dev.log). Auth rate limit is 10 logins/60s — batch logins or wait.
+
+## 2. fix(api): inactive-workspace self-lockout (no recovery path)
+- `resolveTenant`: id lookups no longer filter `isActive`; inactive tenants → members get 403 `WORKSPACE_INACTIVE` on all surfaces EXCEPT GET/PATCH `/api/tenants/me` (settings loads + reactivation saves). Non-members/unauthenticated still 404 (no existence leak). Slug lookups keep the isActive filter.
+- Tests: 4 new regression tests in tests/tenant.spec.ts; api suite 336/336 green.
+- Live-verified end-to-end: deactivate → settings 200 + menus 403 → re-check box + Save in UI → `isActive=t` in DB → menus 200.
+- Docs: `WORKSPACE_INACTIVE` row added to docs/api/README.md error table.
+
+## Excluded from commits (other-session noise, untouched)
+Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
+
 # Warm Hospitality Visual Refresh — Web (out-of-roadmap polish)
 
 ## Context

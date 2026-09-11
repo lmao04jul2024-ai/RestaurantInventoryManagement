@@ -108,6 +108,68 @@ describe('guard rails', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({ error: { code: 'TENANT_MISMATCH' } });
   });
+
+  // ── Inactive-workspace recovery (self-lockout fix) ──────────────────────────
+  describe('inactive workspace recovery', () => {
+    const inactiveRow = makeTenantRow({ id: 't-inactive', isActive: false });
+    const member = makeUser({ tenantId: 't-inactive', role: UserRole.ADMIN });
+
+    it('lets a member GET their settings while inactive (settings page can load)', async () => {
+      findFirst.mockResolvedValue(inactiveRow);
+      const { next } = await call({
+        headers: { 'x-tenant-id': 't-inactive' },
+        query: {},
+        method: 'GET',
+        originalUrl: '/api/tenants/me',
+        url: '/me',
+        user: { ...member } as never,
+      });
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets a member PATCH their settings while inactive (reactivation path)', async () => {
+      findFirst.mockResolvedValue(inactiveRow);
+      const { next } = await call({
+        headers: { 'x-tenant-id': 't-inactive' },
+        query: {},
+        method: 'PATCH',
+        originalUrl: '/api/tenants/me',
+        url: '/me',
+        user: { ...member } as never,
+      });
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks members from every other surface with 403 WORKSPACE_INACTIVE', async () => {
+      findFirst.mockResolvedValue(inactiveRow);
+      const { res, next } = await call({
+        headers: { 'x-tenant-id': 't-inactive' },
+        query: {},
+        method: 'GET',
+        originalUrl: '/api/menus',
+        url: '/',
+        user: { ...member } as never,
+      });
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(403);
+      expect(res.body).toMatchObject({ error: { code: 'WORKSPACE_INACTIVE' } });
+    });
+
+    it('still 404s inactive tenants for unauthenticated callers (no existence leak)', async () => {
+      findFirst.mockResolvedValue(inactiveRow);
+      const { res, next } = await call({
+        headers: { 'x-tenant-id': 't-inactive' },
+        query: {},
+        method: 'GET',
+        originalUrl: '/api/tenants/me',
+        url: '/me',
+      });
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(404);
+      expect(res.body).toMatchObject({ error: { code: 'TENANT_NOT_FOUND' } });
+    });
+  });
+
 });
 
 describe('getScopedWhere helper', () => {

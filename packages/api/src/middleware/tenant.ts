@@ -60,10 +60,14 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
       });
     }
 
-    // Look up tenant to verify it exists and is active
+    // Look up tenant to verify it exists. For id lookups we deliberately do NOT
+    // filter on isActive here — an inactive workspace's members must still be
+    // able to reach the self-service settings endpoints to reactivate it
+    // (otherwise deactivating the workspace bricks it with no recovery path).
+    // Slug lookups (public storefront paths) keep the isActive filter.
     const tenant = await prisma.tenant.findFirst({
       where:
-        lookupBy === 'slug' ? { slug: tenantIdentifier, isActive: true } : { id: tenantIdentifier, isActive: true },
+        lookupBy === 'slug' ? { slug: tenantIdentifier, isActive: true } : { id: tenantIdentifier },
     });
 
     if (!tenant) {
@@ -83,6 +87,35 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
           message: 'Access to this tenant is forbidden with your credentials',
         },
       });
+    }
+
+    // Inactive workspace handling. Members keep read/update access to their own
+    // settings (GET/PATCH /api/tenants/me) so an ADMIN can re-check "Workspace
+    // active"; every other surface is cut off. Non-members see the same 404 as
+    // before (no existence leak).
+    if (!tenant.isActive) {
+      const target = (req.originalUrl ?? req.url ?? '').split('?')[0];
+      const isMember = Boolean(req.user && req.user.tenantId === tenant.id);
+      const isSelfServiceSettings =
+        isMember && (req.method === 'GET' || req.method === 'PATCH') && target === '/api/tenants/me';
+
+      if (isMember && !isSelfServiceSettings) {
+        return res.status(403).json({
+          error: {
+            code: 'WORKSPACE_INACTIVE',
+            message:
+              'This workspace is inactive. Open Settings and re-enable "Workspace active" to restore access.',
+          },
+        });
+      }
+      if (!isSelfServiceSettings) {
+        return res.status(404).json({
+          error: {
+            code: 'TENANT_NOT_FOUND',
+            message: 'Tenant not found or inactive',
+          },
+        });
+      }
     }
 
     req.tenantId = tenant.id;
