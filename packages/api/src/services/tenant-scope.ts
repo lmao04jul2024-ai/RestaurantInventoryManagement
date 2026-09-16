@@ -48,8 +48,9 @@ const SCOPED_WHERE_OPS = new Set([
  * call should be left completely untouched (non-scoped model or an operation
  * whose unique `where` cannot be safely rewritten — e.g. findUnique/update).
  *
- * The request's tenantId ALWAYS wins: an existing scoped key is replaced, so a
- * stale hard-coded tenant can never leak into another tenant's context.
+ * The request's tenantId ALWAYS wins: an existing scoped key is replaced, and
+ * on `create`/`createMany` an explicit (stale or malicious) `tenantId` is
+ * overwritten — a caller under tenant context can never write cross-tenant.
  */
 export function applyTenantScope(
   model: string,
@@ -66,10 +67,23 @@ export function applyTenantScope(
 
   if (operation === 'create' && args?.data) {
     const data = args.data as Record<string, unknown>;
-    if (data.tenantId === undefined) {
-      return { ...args, data: { ...data, tenantId } };
-    }
+    // S1.1 hardening: the request tenant ALWAYS wins on create — an explicit
+    // tenantId is overwritten, never trusted. Call sites that need a different
+    // tenant (public onboarding) run OUTSIDE any tenant context, so they hit
+    // the pass-through branch in database.ts and are unaffected.
+    return { ...args, data: { ...data, tenantId } };
   }
+
+  if (operation === 'createMany' && args?.data) {
+    // Same hardening for bulk creates: every row is stamped with the request
+    // tenant, regardless of any tenantId present in the input rows.
+    const data = args.data;
+    if (Array.isArray(data)) {
+      return { ...args, data: data.map((d) => ({ ...(d as Record<string, unknown>), tenantId })) };
+    }
+    return { ...args, data: { ...(data as Record<string, unknown>), tenantId } };
+  }
+
 
   return undefined;
 }

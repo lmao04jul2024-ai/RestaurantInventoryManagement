@@ -30,15 +30,71 @@ describe('tenant-scope guard (15.1) — where-bearing operations', () => {
   });
 });
 
-describe('tenant-scope guard — create', () => {
+describe('tenant-scope guard — create (S1.1 hardening)', () => {
   it('injects tenantId when the caller forgot it', () => {
     const scoped = applyTenantScope('Supplier', 'create', { data: { name: 'Acme' } }, 'tenant-9');
     expect(scoped).toEqual({ data: { name: 'Acme', tenantId: 'tenant-9' } });
   });
 
-  it('leaves an explicit tenantId untouched', () => {
+  it('FORCES the request tenantId over an explicit stale one (S1.1)', () => {
+    // Regression: the Week-15 guard used to trust an explicit tenantId, so a
+    // stale/malicious value could write cross-tenant rows. The request tenant
+    // now always wins, mirroring the where-path semantics.
     const args = { data: { name: 'Acme', tenantId: 'tenant-1' } };
-    expect(applyTenantScope('Supplier', 'create', args, 'tenant-9')).toBeUndefined();
+    const scoped = applyTenantScope('Supplier', 'create', args, 'tenant-9');
+    expect(scoped).toEqual({ data: { name: 'Acme', tenantId: 'tenant-9' } });
+  });
+
+  it('stamps every row of a bulk createMany (array form) with the request tenant', () => {
+    const scoped = applyTenantScope('InventoryTransaction', 'createMany', {
+      data: [
+        { itemId: 'i-1', quantity: 2 },
+        { itemId: 'i-2', quantity: 3, tenantId: 'leak' },
+      ],
+    }, 'tenant-9');
+    expect(scoped?.data).toEqual([
+      { itemId: 'i-1', quantity: 2, tenantId: 'tenant-9' },
+      { itemId: 'i-2', quantity: 3, tenantId: 'tenant-9' },
+    ]);
+  });
+
+  it('stamps a single-row createMany (object form) with the request tenant', () => {
+    const scoped = applyTenantScope('User', 'createMany', { data: { email: 'a@b.com' } }, 'tenant-9');
+    expect(scoped?.data).toEqual({ email: 'a@b.com', tenantId: 'tenant-9' });
+  });
+
+  it('passes through when there is no data payload (defensive)', () => {
+    expect(applyTenantScope('Order', 'create', undefined, 'tenant-9')).toBeUndefined();
+    expect(applyTenantScope('Order', 'createMany', undefined, 'tenant-9')).toBeUndefined();
+  });
+});
+
+describe('S1.2 — cross-tenant isolation matrix (every scoped model × operation)', () => {
+  const READ_OPS = ['findMany', 'findFirst', 'count', 'aggregate', 'groupBy', 'updateMany', 'deleteMany'] as const;
+
+  it.each([...TENANT_SCOPED_MODELS])('%s: a tenant-9 context can never read tenant-a rows', (model) => {
+    for (const op of READ_OPS) {
+      const scoped = applyTenantScope(model, op, { where: { tenantId: 'tenant-a', isActive: true } }, 'tenant-9');
+      expect((scoped?.where as Record<string, unknown>).tenantId).toBe('tenant-9');
+    }
+  });
+
+  it.each([...TENANT_SCOPED_MODELS])('%s: a tenant-9 context can never write tenant-a rows', (model) => {
+    const create = applyTenantScope(model, 'create', { data: { tenantId: 'tenant-a' } }, 'tenant-9');
+    expect((create?.data as Record<string, unknown>).tenantId).toBe('tenant-9');
+
+    const createMany = applyTenantScope(model, 'createMany', { data: [{ tenantId: 'tenant-a' }] }, 'tenant-9');
+    for (const row of createMany?.data as Array<Record<string, unknown>>) {
+      expect(row.tenantId).toBe('tenant-9');
+    }
+  });
+
+  it.each([...TENANT_SCOPED_MODELS])('%s: untouched paths stay predictable', (model) => {
+    // Unique-where ops are pass-through BY DESIGN — controllers guard them via
+    // findFirst-where-tenantId first (documented in the audit: S1.1).
+    for (const op of ['findUnique', 'update', 'delete', 'upsert', 'findUniqueOrThrow']) {
+      expect(applyTenantScope(model, op, { where: { id: 'x' } }, 'tenant-9')).toBeUndefined();
+    }
   });
 });
 

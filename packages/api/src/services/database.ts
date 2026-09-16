@@ -14,8 +14,9 @@ const base = globalForPrisma.prisma || new PrismaClient({
 // Every tenant-owned read / count / bulk-write inherits the request's tenantId
 // from the AsyncLocalStorage context set by `resolveTenant` (runWithTenant).
 // A controller that forgets to scope can therefore never cross tenant
-// boundaries. Unique-where operations (findUnique/update/delete) are left
-// alone — the existing findFirst-then-write guards keep covering those.
+// boundaries. Creates force the context tenant (S1.1 hardening). Unique-where
+// operations (findUnique/update/delete) are left alone — the existing
+// findFirst-then-write guards keep covering those.
 const tenantAware = base.$extends({
   query: {
     async $allOperations({ model, operation, args, query }) {
