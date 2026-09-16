@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tansta
 import { inventoryService } from '@/services/inventory.service';
 import type {
   CreatePurchaseOrderPayload,
+  InventoryImportPayload,
   InventoryItemPayload,
   InventoryItemUpdatePayload,
   PurchaseOrderStatus,
@@ -73,6 +74,19 @@ export function useCreateItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: InventoryItemPayload) => inventoryService.createItem(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INVENTORY_KEYS }),
+  });
+}
+
+/**
+ * Phase 5 S3.1 — CSV inventory import mutation. A successful import changes
+ * derived inventory state (items list, low-stock, valuation), so it reuses the
+ * same invalidation set as item creation.
+ */
+export function useImportItems() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: InventoryImportPayload) => inventoryService.importItems(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: INVENTORY_KEYS }),
   });
 }

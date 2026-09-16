@@ -3,6 +3,8 @@ import { Pagination } from '@/types/menu';
 import type {
   ConsumptionReportItem,
   CreatePurchaseOrderPayload,
+  InventoryImportPayload,
+  InventoryImportResult,
   InventoryItem,
   InventoryItemListQuery,
   InventoryItemPayload,
@@ -53,6 +55,18 @@ export const inventoryService = {
 
   async deleteItem(id: string): Promise<void> {
     await api.delete(`/inventory/items/${id}`);
+  },
+
+  /**
+   * Phase 5 S3.1 — CSV inventory import. Accepts raw CSV text (first line is
+   * the header); `dryRun` previews validation without writing anything.
+   */
+  async importItems(payload: InventoryImportPayload): Promise<InventoryImportResult> {
+    const { data } = await api.post<{ data: InventoryImportResult }>(
+      '/inventory/items/import',
+      { format: 'csv', ...payload },
+    );
+    return data.data;
   },
 
   // ── Stock movements ──────────────────────────────────────────────────────────

@@ -97,6 +97,21 @@ describe('inventoryService — Week 8 endpoint contract', () => {
     expect(apiDelete).toHaveBeenCalledWith('/inventory/items/item-1');
   });
 
+  it('imports items via POST /inventory/items/import as CSV with dryRun passthrough', async () => {
+    apiPost.mockResolvedValue({
+      data: { data: { total: 3, created: 3, skipped: 0, dryRun: true, errors: [], warnings: [] } },
+    });
+
+    const result = await inventoryService.importItems({ data: 'name,sku\nFlour,FL-1', dryRun: true });
+
+    expect(apiPost).toHaveBeenCalledWith('/inventory/items/import', {
+      format: 'csv',
+      data: 'name,sku\nFlour,FL-1',
+      dryRun: true,
+    });
+    expect(result).toMatchObject({ total: 3, created: 3, dryRun: true });
+  });
+
   it('updates suppliers via PATCH /suppliers/:id', async () => {
     apiPatch.mockResolvedValue({ data: { data: { id: 'sup-1', phone: '+123' } } });
 

@@ -138,6 +138,35 @@ export interface InventoryItemPayload {
 
 export type InventoryItemUpdatePayload = Partial<InventoryItemPayload>;
 
+export interface InventoryImportRowError {
+  row: number;
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface InventoryImportWarning {
+  row: number;
+  code: string;
+  message: string;
+}
+
+export interface InventoryImportPayload {
+  /** Raw CSV text (first line is the header row). */
+  data: string;
+  /** Preview-only: validate and count, don't write anything. */
+  dryRun?: boolean;
+}
+
+export interface InventoryImportResult {
+  total: number;
+  created: number;
+  skipped: number;
+  dryRun: boolean;
+  errors: InventoryImportRowError[];
+  warnings: InventoryImportWarning[];
+}
+
 export interface StockTransactionPayload {
   transactionType: TransactionType;
   quantity: number;
