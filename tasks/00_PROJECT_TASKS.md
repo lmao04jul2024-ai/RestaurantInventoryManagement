@@ -224,12 +224,12 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **S1.5** Tenant resolution + isolation docs section in docs/api/README.md *(subdomain/TENANT_ROOT_DOMAIN + per-tenant rate limiting documented, audit doc linked)*
 
 ### S-Week 2: Manual Billing Operations + Super-Admin Console (Phase B+C, combined)
-- [ ] **S2.1** Platform-admin role (distinct from tenant ADMIN) + backend guard; reject platform-admin for tenant surfaces
-- [ ] **S2.2** Super-admin API: list/search tenants, view usage (orders/users/analytics summary), set plan / subscriptionStatus / seatsLimit — all with audit-log records (who/what/when)
-- [ ] **S2.3** Deactivate/reactivate workspace + manual lapse flow (ACTIVE → PAST_DUE → INACTIVE) reusing tested isActive semantics; audit-logged
-- [ ] **S2.4** Super-admin web console (/platform/* routes): tenants table, tenant detail w/ usage + plan/status editor + audit history
-- [ ] **S2.5** Seats-limit enforcement at user-invite time (409 SEATS_LIMIT_REACHED), gated on plan's seatsLimit
-- [ ] **S2.6** Remove/hide self-serve plan-change actions from /dashboard/tenants; keep plan/usage read-only
+- [x] **S2.1** Platform-admin role (distinct from tenant ADMIN) + backend guard; reject platform-admin for tenant surfaces
+- [x] **S2.2** Super-admin API: list/search tenants, view usage (orders/users/analytics summary), set plan / subscriptionStatus / seatsLimit — all with audit-log records (who/what/when)
+- [x] **S2.3** Deactivate/reactivate workspace + manual lapse flow (ACTIVE → PAST_DUE → INACTIVE) reusing tested isActive semantics; audit-logged
+- [x] **S2.4** Super-admin web console (/platform/* routes): tenants table, tenant detail w/ usage + plan/status editor + audit history
+- [x] **S2.5** Seats-limit enforcement at user-invite time (409 SEATS_LIMIT_REACHED), gated on plan's seatsLimit
+- [x] **S2.6** Remove/hide self-serve plan-change actions from /dashboard/tenants; keep plan/usage read-only
 
 ### S-Week 3: Onboarding & Retention (Phase D)
 - [ ] **S3.1** Guided onboarding wizard on top of /onboarding: profile → inventory import (CSV/Excel) → suppliers → thresholds → invite team
