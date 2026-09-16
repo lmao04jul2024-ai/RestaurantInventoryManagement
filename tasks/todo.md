@@ -21,6 +21,24 @@
 
 ## Excluded from commits (other-session noise, untouched)
 Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
+# Session 2026-09-16 — SaaS Commercialization Plan (Phase 5 tasks added)
+
+## Context
+- User decision: sell app to multiple businesses; shared-DB/row-level multi-tenancy already exists (Week 15). Billing is MANUAL — no payment processor, no in-app transactions, ever. App records commercial state only.
+- Added "Phase 5: SaaS Commercialization" to tasks/00_PROJECT_TASKS.md (S-Weeks 1–4, 20 new tasks S1.1–S4.4).
+- First implementation task: **S1.1 tenant-isolation audit** → S1.2 cross-tenant test suite.
+- After S1: S-Week 2 combines manual billing ops + super-admin console (platform-admin role, audit-logged plan/status/seat changes, seats-limit enforcement at invite, remove self-serve plan-change UI).
+- Then S-Week 3 (onboarding wizard/CSV import/data export/email) and S-Week 4 (prod deploy, per-tenant logging, marketing site with manual-billing CTA) — parallelizable.
+
+## Acceptance notes
+- Keep house style: plan-mode first, logical feature commits, run test suites (api/web/shared/mobile) before marking ticks.
+- S1.3 must not break the L052 login flow or WORKSPACE_INACTIVE recovery path (todo.md session 2026-09-11).
+- No Stripe/payment deps anywhere; pricing page is "contact to subscribe".
+
+## Excluded from commits (other-session noise, untouched)
+Dockerfile, docker-compose.yml, package-lock.json, next.config.js, tsconfig.json, tests/mocks/next-navigation.ts
+
+
 
 # Session 2026-09-11 — Configuration lockout investigation + dark-mode select fix
 

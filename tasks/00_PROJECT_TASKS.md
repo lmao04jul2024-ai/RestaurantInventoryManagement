@@ -206,6 +206,48 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [ ] **24.5** Perform load testing and performance validation
 - [ ] **24.6** Execute go-live checklist and launch
 
+
+## 🚀 Phase 5: SaaS Commercialization (post-roadmap, added 2026-09-16)
+
+> Goal: sell the app to multiple businesses as multi-tenant SaaS. Multi-tenancy itself
+> already shipped (Week 15: tenant-scoped Prisma $extends, /api/tenants, /onboarding,
+> plan/subscriptionStatus/seatsLimit). **Billing is MANUAL by decision (2026-09-16): no
+> payment processor, no in-app transactions — the app only records commercial state.**
+> Plan changes are operator-only; enforcement machinery (feature gating, seat limits,
+> isActive) is retained.
+
+### S-Week 1: Tenant Isolation Hardening (Phase A)
+- [x] **S1.1** Tenant-isolation audit: enumerate every Prisma model/query path ($extends coverage, raw SQL, updateMany/deleteMany, includes/nested writes) and fix any unscoped paths *(15/15 scoped models verified, zero raw SQL, create/createMany now FORCE the context tenant — docs/security/TENANT_ISOLATION_AUDIT.md)*
+- [x] **S1.2** Cross-tenant isolation test suite: seeded tenants A/B, assert tenant A can never read/write tenant B rows across all API surfaces *(tenant-scope.spec: 15-model × 7-op matrix + create/createMany override tests; 66 tests in file, api suite green)*
+- [x] **S1.3** Subdomain-based tenant resolution (acme.yourapp.com) alongside X-Tenant-ID, keeping the L052 login chicken-and-egg fix intact *(TENANT_ROOT_DOMAIN deterministic mode added to extractSubdomain; apex/www/foreign hosts never resolve; legacy heuristic retained when unset; 5 new tenant.spec tests)*
+- [x] **S1.4** Per-tenant API rate limits/quotas so one tenant cannot degrade others (extend existing auth limiter) *(tenantRateLimit keyed on signature-verified JWT tenant / req.tenantId / IP fallback, RATE_LIMIT_TENANT_MAX=3000/min, mounted app-level before routers; 5 new rate-limit.spec tests incl. forged-token non-poisoning)*
+- [x] **S1.5** Tenant resolution + isolation docs section in docs/api/README.md *(subdomain/TENANT_ROOT_DOMAIN + per-tenant rate limiting documented, audit doc linked)*
+
+### S-Week 2: Manual Billing Operations + Super-Admin Console (Phase B+C, combined)
+- [ ] **S2.1** Platform-admin role (distinct from tenant ADMIN) + backend guard; reject platform-admin for tenant surfaces
+- [ ] **S2.2** Super-admin API: list/search tenants, view usage (orders/users/analytics summary), set plan / subscriptionStatus / seatsLimit — all with audit-log records (who/what/when)
+- [ ] **S2.3** Deactivate/reactivate workspace + manual lapse flow (ACTIVE → PAST_DUE → INACTIVE) reusing tested isActive semantics; audit-logged
+- [ ] **S2.4** Super-admin web console (/platform/* routes): tenants table, tenant detail w/ usage + plan/status editor + audit history
+- [ ] **S2.5** Seats-limit enforcement at user-invite time (409 SEATS_LIMIT_REACHED), gated on plan's seatsLimit
+- [ ] **S2.6** Remove/hide self-serve plan-change actions from /dashboard/tenants; keep plan/usage read-only
+
+### S-Week 3: Onboarding & Retention (Phase D)
+- [ ] **S3.1** Guided onboarding wizard on top of /onboarding: profile → inventory import (CSV/Excel) → suppliers → thresholds → invite team
+- [ ] **S3.2** Data export for tenants (CSV of inventory/orders/menu) — churn-safety feature
+- [ ] **S3.3** Email lifecycle: verification, team invites, trial-expiring reminder (mail provider abstraction + templates)
+- [ ] **S3.4** Operator attention list: admin console banner/queue of tenants needing manual action (trial ending, PAST_DUE)
+- [ ] **S3.5** Tenant-facing usage + entitlement display polish (what plan includes vs what's consumed)
+
+### S-Week 4: Launch Readiness (Phase E)
+- [ ] **S4.1** Single production deployment (existing Docker/compose → cloud host, managed Postgres, backups verified)
+- [ ] **S4.2** Per-tenant log tagging + monitoring hooks (extends docs/deployment OPERATIONS runbooks)
+- [ ] **S4.3** Marketing site: pricing page (manual-billing "contact to subscribe" CTA, no checkout), demo video, trial signup funnel to /onboarding
+- [ ] **S4.4** Go-live checklist update in docs/deployment for multi-tenant operations (tenant provisioning runbook, offboarding/data-retention policy)
+
+**Dependencies:** S-Week 1 is critical path (data-leak risk before selling). S-Week 2 depends on S1.1/S1.2 passing. S-Week 3/4 are parallelizable after S-Week 2.
+
+
+
 ## 📊 Task Statistics
 - **Total Tasks**: 144
 - **Phase 1**: 36 tasks (Weeks 1-6)
