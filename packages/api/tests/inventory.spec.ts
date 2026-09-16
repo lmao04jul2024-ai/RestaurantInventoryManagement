@@ -6,6 +6,7 @@ jest.mock('../src/services/database', () => ({
       findMany: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
+      createMany: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
       // Prisma field reference target for same-row stock comparisons (lowStock filter)
@@ -17,7 +18,7 @@ jest.mock('../src/services/database', () => ({
       count: jest.fn(),
       groupBy: jest.fn(),
     },
-    supplier: { findFirst: jest.fn() },
+    supplier: { findFirst: jest.fn(), findMany: jest.fn() },
     purchaseOrderItem: { count: jest.fn() },
     $transaction: jest.fn(async (ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   },
@@ -314,4 +315,98 @@ describe('stock transactions (8.1) & monitoring (8.2)', () => {
       pagination: { page: 1, limit: 5, total: 8, totalPages: 2 },
     });
   });
+
+describe('CSV inventory import (S3.1)', () => {
+  const { importInventoryItems } = require('../src/controllers/inventory.controller');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default: no in-tenant SKU clashes, one known supplier.
+    (prisma.inventoryItem.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.supplier.findMany as jest.Mock).mockResolvedValue([{ id: 'sup-1', name: 'Fresh Farms Co' }]);
+    (prisma.inventoryItem.createMany as jest.Mock).mockResolvedValue({ count: 2 });
+  });
+
+  const csv = (lines: string[]) => lines.join('\n');
+
+  it('imports valid rows in one createMany, resolving suppliers and scoping to the tenant', async () => {
+    const data = csv([
+      'name,sku,currentStock,minStock,unit,supplier',
+      'Flour,FL-1,10,4,KG,Fresh Farms Co',
+      'Sugar,SU-1,5,2,KG,Unknown Vendor',
+    ]);
+
+    const { res } = await run(importInventoryItems, tenantReq({ body: { data } }));
+
+    expect(res.statusCode).toBe(201);
+    expect(bodyOf(res).data).toMatchObject({ total: 2, created: 2, skipped: 0, dryRun: false });
+    const args = (prisma.inventoryItem.createMany as jest.Mock).mock.calls[0][0];
+    expect(args.skipDuplicates).toBe(false);
+    expect(args.data).toHaveLength(2);
+    expect(args.data[0]).toMatchObject({ sku: 'FL-1', supplierId: 'sup-1', tenantId: 'tenant-1', isActive: true });
+    // Unknown supplier → created unlinked, flagged as a warning (not an error).
+    expect(args.data[1]).toMatchObject({ sku: 'SU-1', supplierId: null });
+    const warnings = (bodyOf(res).data as { warnings: { row: number; code: string }[] }).warnings;
+    expect(warnings).toEqual([{ row: 3, code: 'SUPPLIER_UNKNOWN', message: expect.any(String) }]);
+  });
+
+  it('dryRun validates without writing anything', async () => {
+    const data = csv(['name,sku,minStock', 'Flour,FL-1,4']);
+
+    const { res } = await run(importInventoryItems, tenantReq({ body: { data, dryRun: true } }));
+
+    expect(bodyOf(res).data).toMatchObject({ total: 1, created: 0, skipped: 0, dryRun: true });
+    expect(prisma.inventoryItem.createMany).not.toHaveBeenCalled();
+  });
+
+  it('reports per-row errors without failing the batch (invalid row + in-file SKU duplicate)', async () => {
+    (prisma.inventoryItem.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    const data = csv([
+      'name,sku,minStock',
+      'Flour,FL-1,4',
+      ',BAD-1,2', // missing name
+      'More Flour,FL-1,3', // duplicate SKU in file
+    ]);
+
+    const { res } = await run(importInventoryItems, tenantReq({ body: { data } }));
+
+    expect(bodyOf(res).data).toMatchObject({ total: 3, created: 1, skipped: 2 });
+    const errors = (bodyOf(res).data as { errors: { row: number; code: string }[] }).errors;
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ row: 3, code: 'IMPORT_ROW_INVALID' }),
+        expect.objectContaining({ row: 4, field: 'sku', code: 'SKU_DUPLICATE' }),
+      ]),
+    );
+  });
+
+  it('rejects in-tenant SKU clashes per-row instead of overwriting', async () => {
+    (prisma.inventoryItem.createMany as jest.Mock).mockResolvedValue({ count: 0 });
+    (prisma.inventoryItem.findMany as jest.Mock).mockResolvedValue([{ sku: 'FL-1' }]);
+    const data = csv(['name,sku,minStock', 'Flour,FL-1,4']);
+
+    const { res } = await run(importInventoryItems, tenantReq({ body: { data } }));
+
+    expect(bodyOf(res).data).toMatchObject({ total: 1, created: 0, skipped: 1 });
+    expect(prisma.inventoryItem.createMany).not.toHaveBeenCalled();
+    const errors = (bodyOf(res).data as { errors: { row: number; code: string }[] }).errors;
+    expect(errors).toEqual([expect.objectContaining({ row: 2, field: 'sku', code: 'SKU_DUPLICATE' })]);
+  });
+
+  it('400s a header-only CSV as IMPORT_EMPTY', async () => {
+    const { next } = await run(importInventoryItems, tenantReq({ body: { data: 'name,sku,minStock' } }));
+
+    expect(next.mock.calls[0][0]).toMatchObject({ statusCode: 400, code: 'IMPORT_EMPTY' });
+  });
+
+  it('400s a CSV whose header matches no known column as IMPORT_NO_COLUMNS', async () => {
+    const { next } = await run(
+      importInventoryItems,
+      tenantReq({ body: { data: 'foo,bar\n1,2' } }),
+    );
+
+    expect(next.mock.calls[0][0]).toMatchObject({ statusCode: 400, code: 'IMPORT_NO_COLUMNS' });
+  });
+});
+
 });

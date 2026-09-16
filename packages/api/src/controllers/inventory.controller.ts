@@ -7,6 +7,8 @@ import {
   consumptionQuerySchema,
   createInventoryItemSchema,
   idParamSchema,
+  inventoryImportBodySchema,
+  inventoryImportRowSchema,
   inventoryItemQuerySchema,
   stockTransactionSchema,
   transactionQuerySchema,
@@ -15,6 +17,7 @@ import {
   validateParams,
   validateQuery,
 } from '../utils/validation';
+import { parseInventoryCsv } from '../services/inventory-import';
 
 /**
  * Week 8 — inventory tracking (8.1), stock monitoring & alerts (8.2),
@@ -117,6 +120,151 @@ export async function createInventoryItem(req: TenantRequest, res: Response, nex
     next(e);
   }
 }
+
+/**
+ * Phase 5 S3.1 — CSV inventory import (POST /api/inventory/items/import).
+ *
+ * Batch onboarding: a new restaurant pastes/exports its spreadsheet and lands
+ * with a stocked catalog. Semantics:
+ * - First line is always a header (tolerant alias mapping); each subsequent
+ *   line is validated independently — per-row errors never fail the batch.
+ * - `supplierName` is resolved to this tenant's suppliers (case-insensitive);
+ *   unknown names are nulled (item created unlinked) and flagged in `warnings`.
+ * - Duplicate SKUs (in-batch or in-tenant, case-insensitive) are rejected
+ *   per-row with SKU_DUPLICATE — never silently merged or overwritten.
+ * - `dryRun: true` validates everything and returns the same envelope with
+ *   `created: 0` and zero writes (safe to preview before committing).
+ * - Writes use a single `createMany`; stock starts from `currentStock` exactly
+ *   as imported — no opening-balance InventoryTransaction rows are written, so
+ *   consumption/valuation reports don't see phantom movements.
+ */
+export async function importInventoryItems(req: TenantRequest, res: Response, next: NextFunction) {
+  try {
+    const tenantId = requireTenant(req.tenantId);
+    const body = validateBody(inventoryImportBodySchema, req.body);
+
+    let rows: Record<string, string>[];
+    try {
+      rows = parseInventoryCsv(body.data).records;
+    } catch (e) {
+      const code = (e as { code?: string }).code === 'CSV_NO_COLUMNS' ? 'IMPORT_NO_COLUMNS' : 'IMPORT_EMPTY';
+      throw httpError(400, code, (e as Error).message);
+    }
+    if (rows.length === 0) throw httpError(400, 'IMPORT_EMPTY', 'CSV contains a header but no data rows');
+
+    const seen = new Set<string>();
+    const valid: { index: number; data: Record<string, unknown>; supplierName: string | null }[] = [];
+    const errors: { row: number; field: string; code: string; message: string }[] = [];
+
+    rows.forEach((raw, i) => {
+      const rowNum = i + 2; // +1 header, +1 one-based
+      const { error, value } = inventoryImportRowSchema.validate(raw, { abortEarly: false, convert: true });
+      if (error) {
+        for (const detail of error.details) {
+          errors.push({
+            row: rowNum,
+            field: String(detail.path[0] ?? 'row'),
+            code: 'IMPORT_ROW_INVALID',
+            message: detail.message,
+          });
+        }
+        return;
+      }
+      const sku = String(value.sku);
+      const skuKey = sku.toLowerCase();
+      if (seen.has(skuKey)) {
+        errors.push({ row: rowNum, field: 'sku', code: 'SKU_DUPLICATE', message: `SKU "${sku}" in file twice` });
+        return;
+      }
+      seen.add(skuKey);
+      if (value.maxStock != null && value.maxStock < value.minStock) {
+        errors.push({
+          row: rowNum,
+          field: 'maxStock',
+          code: 'MAX_STOCK_BELOW_MIN',
+          message: 'maxStock must be >= minStock',
+        });
+        return;
+      }
+      const rawSupplier = typeof value.supplierName === 'string' ? value.supplierName.trim() : '';
+      valid.push({ index: rowNum, data: value, supplierName: rawSupplier === '' ? null : rawSupplier });
+    });
+
+    // In-tenant SKU clashes (case-insensitive): one lookup for all valid SKUs.
+    const skuList = valid.map((v) => String(v.data.sku));
+    const existing =
+      skuList.length > 0
+        ? await prisma.inventoryItem.findMany({
+            where: { tenantId, sku: { in: skuList, mode: 'insensitive' } },
+            select: { sku: true },
+          })
+        : [];
+    const taken = new Set(existing.map((r) => r.sku.toLowerCase()));
+    const clashFree = valid.filter((v) => {
+      if (taken.has(String(v.data.sku).toLowerCase())) {
+        errors.push({
+          row: v.index,
+          field: 'sku',
+          code: 'SKU_DUPLICATE',
+          message: `SKU "${v.data.sku}" already exists for this tenant`,
+        });
+        return false;
+      }
+      return true;
+    });
+
+    // Supplier name → id within this tenant (case-insensitive, one lookup).
+    const names = [...new Set(clashFree.map((v) => v.supplierName).filter((n): n is string => n !== null))];
+    const suppliers =
+      names.length > 0
+        ? await prisma.supplier.findMany({
+            where: { tenantId, name: { in: names, mode: 'insensitive' } },
+            select: { id: true, name: true },
+          })
+        : [];
+    const supplierByName = new Map(suppliers.map((s) => [s.name.toLowerCase(), s.id]));
+
+    const warnings: { row: number; code: string; message: string }[] = [];
+    // createMany takes a flat input type — the Joi-validated rows are correctly
+    // shaped here, but TS only sees Record<string, unknown>, so cast once.
+    const payload = clashFree.map((v) => {
+      let supplierId: string | null = null;
+      if (v.supplierName) {
+        const id = supplierByName.get(v.supplierName.toLowerCase()) ?? null;
+        if (!id) {
+          warnings.push({
+            row: v.index,
+            code: 'SUPPLIER_UNKNOWN',
+            message: `Supplier "${v.supplierName}" not found — created without a link`,
+          });
+        }
+        supplierId = id;
+      }
+      const { supplierName: _dropped, ...rest } = v.data;
+      return { ...rest, supplierId, tenantId, isActive: true } as Prisma.InventoryItemCreateManyInput;
+    });
+
+    let created = 0;
+    if (!body.dryRun && payload.length > 0) {
+      const result = await prisma.inventoryItem.createMany({ data: payload, skipDuplicates: false });
+      created = result.count;
+    }
+
+    res.status(201).json({
+      data: {
+        total: rows.length,
+        created,
+        skipped: rows.length - (body.dryRun ? payload.length : created),
+        dryRun: body.dryRun,
+        errors,
+        warnings,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
 
 export async function getInventoryItem(req: TenantRequest, res: Response, next: NextFunction) {
   try {

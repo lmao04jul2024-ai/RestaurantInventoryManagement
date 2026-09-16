@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import {
   listInventoryItems,
   createInventoryItem,
+  importInventoryItems,
   getInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
@@ -31,6 +32,8 @@ router.get('/reports/consumption', requirePermission('inventory:read'), getConsu
 // Inventory items
 router.get('/items', requirePermission('inventory:read'), listInventoryItems);
 router.post('/items', requireRoleOrHigher(UserRole.MANAGER), createInventoryItem);
+// S3.1 — CSV batch import MUST precede /items/:id or "import" binds as an id.
+router.post('/items/import', requireRoleOrHigher(UserRole.MANAGER), importInventoryItems);
 router.get('/items/:id/transactions', requirePermission('inventory:read'), listTransactions);
 router.post(
   '/items/:id/transactions',

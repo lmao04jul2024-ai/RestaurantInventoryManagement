@@ -218,6 +218,35 @@ export const updateInventoryItemSchema = createInventoryItemSchema.fork(
   (field) => field.optional(),
 );
 
+/**
+ * Phase 5 S3.1 — CSV inventory import rows.
+ *
+ * Server-side schema: accepts tolerant input (legacy imports often include a
+ * header row exported from spreadsheets) and coerces supplier names to IDs.
+ * Returns per-row errors instead of failing the whole batch.
+ */
+
+// Matches the canonical Week-8 unit enum exactly — see INVENTORY_UNITS above.
+export const inventoryImportRowSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(200).required(),
+  sku: Joi.string().trim().min(1).max(64).required(),
+  currentStock: Joi.number().min(0).precision(3).default(0),
+  minStock: Joi.number().min(0).precision(3).required(),
+  maxStock: Joi.number().min(0).precision(3).allow(null),
+  unit: Joi.string().trim().uppercase().valid(...INVENTORY_UNITS).default('UNIT'),
+  costPrice: Joi.number().min(0).precision(2).allow(null),
+  sellingPrice: Joi.number().min(0).precision(2).allow(null),
+  supplierName: Joi.string().trim().max(200).allow(null, ''),
+});
+
+/** Request body for POST /api/inventory/items/import (S3.1). */
+export const inventoryImportBodySchema = Joi.object({
+  format: Joi.string().valid('csv').default('csv'),
+  /** Preview-only: validate and count, don't write anything. */
+  dryRun: Joi.boolean().default(false),
+  data: Joi.string().min(1).max(2_000_000).required(),
+});
+
 export const inventoryItemQuerySchema = Joi.object({
   q: Joi.string().trim().max(200),
   supplierId: uuid,
