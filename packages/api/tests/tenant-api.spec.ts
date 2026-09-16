@@ -174,17 +174,39 @@ describe('tenant profile & configuration (15.2 / 15.3)', () => {
       body: { timezone: 'UTC', taxRate: 9.5, currency: 'EUR', plan: 'BASIC' },
     });
 
+    // S2.6 — plan is no longer self-service: Joi strips it from the payload.
     expect(prisma.tenant.update).toHaveBeenCalledWith({
       where: { id: 'tenant-1' },
-      data: { timezone: 'UTC', taxRate: 9.5, currency: 'EUR', plan: 'BASIC' },
+      data: { timezone: 'UTC', taxRate: 9.5, currency: 'EUR' },
     });
     expect(bodyOf(res).data).toMatchObject({ timezone: 'UTC', taxRate: 9.5 });
   });
 
-  it('rejects an invalid plan tier with 400', async () => {
+  it('strips isActive from a self-service update (a tenant cannot lift its own suspension)', async () => {
+    // S2.6/manual billing — the operator suspends via /api/platform; if the
+    // tenant could PATCH isActive back to true the lapse flow would be void.
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue(makeTenantProfileRow({ isActive: false }));
+    (prisma.tenant.update as jest.Mock).mockResolvedValue(makeTenantProfileRow({ name: 'Demo West', isActive: false }));
+
+    const { res } = await run(updateMyTenant, {
+      ...tenantReq(),
+      body: { name: 'Demo West', isActive: true },
+    });
+
+    expect(prisma.tenant.update).toHaveBeenCalledWith({
+      where: { id: 'tenant-1' },
+      data: { name: 'Demo West' },
+    });
+    expect(bodyOf(res).data).toMatchObject({ name: 'Demo West', isActive: false });
+  });
+
+  it('rejects a payload of only commercial state (manual billing — operator-only via /api/platform)', async () => {
+    // S2.6 — with plan/subscriptionStatus/isActive removed from the
+    // self-service schema, a billing-only payload strips to nothing and fails
+    // the schema's min(1): the tenant cannot change its own commercial state.
     const { next } = await run(updateMyTenant, {
       ...tenantReq(),
-      body: { plan: 'GOLD' },
+      body: { plan: 'ENTERPRISE', subscriptionStatus: 'ACTIVE', isActive: true },
     });
 
     expect(next.mock.calls[0][0]).toMatchObject({ code: 'VALIDATION_ERROR', statusCode: 400 });

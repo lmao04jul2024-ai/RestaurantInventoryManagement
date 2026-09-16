@@ -598,7 +598,11 @@ export const tenantThemeSchema = Joi.object({
   }).allow(null),
 }).allow(null);
 
-/** Self-service tenant profile/config/billing update (15.2/15.3/15.6). Slug is immutable. */
+/** Self-service tenant profile/config update (15.2/15.3). Slug is immutable.
+ * S2.6 (manual billing): plan / subscriptionStatus / isActive are NO LONGER
+ * self-service — the operator manages all commercial state via the audited
+ * /api/platform surface. A tenant must never be able to lift its own
+ * suspension (that would bypass the manual lapse flow entirely). */
 export const updateTenantSchema = Joi.object({
   name: Joi.string().trim().min(2).max(120),
   email: Joi.string().email().max(255).allow(null),
@@ -608,15 +612,29 @@ export const updateTenantSchema = Joi.object({
   currency: currencyCode,
   taxRate: Joi.number().min(0).max(100).precision(2),
   operatingHours: Joi.object().pattern(Joi.string(), Joi.object().pattern(Joi.string(), Joi.string())).allow(null),
-  plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'),
-  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'),
-  isActive: Joi.boolean(),
   // Week 17.2/17.5 — tenant-wide theme & branding document.
   theme: tenantThemeSchema,
 }).min(1);
 
 export const tenantAnalyticsQuerySchema = Joi.object({
   days: Joi.number().integer().min(1).max(365).default(30),
+});
+
+// ── Phase 5 S2.2 — platform (super-admin) schemas ────────────────────────────
+
+/** Operator-only commercial state changes; every write is audit-logged. */
+export const platformTenantUpdateSchema = Joi.object({
+  plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'),
+  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'),
+  seatsLimit: Joi.number().integer().min(1).max(10_000),
+  isActive: Joi.boolean(),
+}).min(1);
+
+/** GET /api/platform/tenants list filters. */
+export const platformListQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  search: Joi.string().trim().allow('').max(120),
 });
 
 // ── Staff management & audit schemas (Week 16) ───────────────────────────────

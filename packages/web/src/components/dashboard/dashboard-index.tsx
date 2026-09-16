@@ -12,8 +12,15 @@ interface QuickLink {
   icon: string;
 }
 
-/** Week 16.1/16.2 — role-specific quick links (the API RBAC matrix stays the boundary). */
+/**
+ * Week 16.1/16.2 — role-specific quick links (the API RBAC matrix stays the boundary).
+ * Phase 5 S2.1 — PLATFORM_ADMIN is a cross-tenant operator role: its links point
+ * at the operator console rather than any single tenant's dashboard.
+ */
 const ROLE_LINKS: Record<UserRole, QuickLink[]> = {
+  PLATFORM_ADMIN: [
+    { label: 'Tenants', desc: 'All workspaces, plans & usage', href: '/platform/tenants', icon: '🏢' },
+  ],
   ADMIN: [
     { label: 'Menu', desc: 'Categories, items & pricing', href: '/dashboard/menu', icon: '📋' },
     { label: 'Inventory', desc: 'Stock, suppliers & purchase orders', href: '/dashboard/inventory', icon: '📦' },

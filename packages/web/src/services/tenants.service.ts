@@ -21,7 +21,8 @@ export const tenantService = {
     return data.data;
   },
 
-  /** PATCH /api/tenants/me — update profile/config/billing fields (MANAGER+). */
+  /** PATCH /api/tenants/me — update profile/config fields (MANAGER+).
+   *  S2.6 — commercial state (plan/status/seats/isActive) is operator-only. */
   async updateMyTenant(payload: TenantUpdatePayload): Promise<TenantProfile> {
     const { data } = await api.patch<{ data: TenantProfile }>('/tenants/me', payload);
     return data.data;

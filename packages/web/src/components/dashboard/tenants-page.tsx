@@ -7,17 +7,13 @@ import Card from '@/components/ui/card';
 import Input from '@/components/ui/input';
 import { useTenant, useTenantAnalytics, useUpdateTenant } from '@/hooks/use-tenant';
 import { getApiErrorMessage } from '@/lib/api';
-import type { OperatingHours, PlanTier, SubscriptionStatus, TenantProfile } from '@/types/tenant';
+import type { OperatingHours, TenantProfile } from '@/types/tenant';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type Day = (typeof DAYS)[number];
 
-const PLANS: PlanTier[] = ['TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'];
-const STATUSES: SubscriptionStatus[] = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'];
 const WINDOWS = [7, 30, 90] as const;
 
-const SELECT_CLS =
-  'block w-full rounded border border-gray-300 bg-surface px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200';
 const TIME_CLS = 'rounded border border-gray-300 px-2 py-1 text-sm disabled:opacity-50';
 
 interface HoursRow {
@@ -34,9 +30,6 @@ interface ProfileForm {
   timezone: string;
   currency: string;
   taxRate: string;
-  plan: PlanTier;
-  subscriptionStatus: SubscriptionStatus;
-  isActive: boolean;
   hours: Record<Day, HoursRow>;
 }
 
@@ -55,9 +48,6 @@ function toForm(tenant: TenantProfile): ProfileForm {
     timezone: tenant.timezone,
     currency: tenant.currency,
     taxRate: String(tenant.taxRate),
-    plan: tenant.plan,
-    subscriptionStatus: tenant.subscriptionStatus,
-    isActive: tenant.isActive,
     hours,
   };
 }
@@ -115,6 +105,8 @@ export default function TenantsPage() {
     }
     const taxRate = Number(form.taxRate);
     try {
+      // S2.6 — commercial state (plan/subscriptionStatus/seatsLimit/isActive) is
+      // operator-only: this payload carries profile/config fields exclusively.
       await save.mutateAsync({
         name: form.name.trim(),
         email: form.email.trim() || null,
@@ -123,9 +115,6 @@ export default function TenantsPage() {
         timezone: form.timezone.trim(),
         currency: form.currency.trim().toUpperCase(),
         taxRate: Number.isFinite(taxRate) ? Math.round(taxRate * 100) / 100 : undefined,
-        plan: form.plan,
-        subscriptionStatus: form.subscriptionStatus,
-        isActive: form.isActive,
         operatingHours,
       });
     } catch (err) {
@@ -149,7 +138,11 @@ export default function TenantsPage() {
             <code className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs">/{tenant.slug}</code>
           </p>
         </div>
-        {!tenant.isActive && <Alert tone="warning">This workspace is currently inactive.</Alert>}
+        {!tenant.isActive && (
+          <Alert tone="warning">
+            This workspace is suspended. Settle your account with your platform operator to reactivate it.
+          </Alert>
+        )}
       </div>
 
       {/* 15.6 — plan, subscription and seat usage */}
@@ -196,43 +189,39 @@ export default function TenantsPage() {
           <Input label="Timezone" placeholder="America/New_York" value={form.timezone} onChange={(e) => set('timezone', e.target.value)} disabled={save.isPending} />
           <Input label="Currency" hint="ISO 4217, e.g. USD" value={form.currency} onChange={(e) => set('currency', e.target.value)} disabled={save.isPending} />
           <Input label="Tax rate (%)" type="number" min={0} max={100} step="0.01" value={form.taxRate} onChange={(e) => set('taxRate', e.target.value)} disabled={save.isPending} />
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-content-default">Plan</span>
-            <select
-              value={form.plan}
-              onChange={(e) => set('plan', e.target.value as PlanTier)}
-              disabled={save.isPending}
-              className={SELECT_CLS}
-            >
-              {PLANS.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-content-default">Subscription status</span>
-            <select
-              value={form.subscriptionStatus}
-              onChange={(e) => set('subscriptionStatus', e.target.value as SubscriptionStatus)}
-              disabled={save.isPending}
-              className={SELECT_CLS}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-end gap-2 pb-2.5 text-sm text-content-default">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => set('isActive', e.target.checked)}
-              disabled={save.isPending}
-              className="h-4 w-4 accent-primary-600"
-            />
-            Workspace active
-          </label>
         </div>
+
+        {/* S2.6 — commercial state is read-only here. Manual billing: the
+            platform operator owns plan/status/seats/active and every change is
+            audited on /api/platform. */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="text-sm">
+            <span className="mb-1.5 block font-medium text-content-default">Plan</span>
+            <span className="rounded bg-primary-50 px-2 py-1 text-xs font-bold uppercase tracking-wide text-primary-700">
+              {billing?.plan ?? tenant.plan}
+            </span>
+          </div>
+          <div className="text-sm">
+            <span className="mb-1.5 block font-medium text-content-default">Subscription status</span>
+            <span className="rounded bg-surface-muted px-2 py-1 text-xs font-semibold uppercase tracking-wide text-content-default">
+              {billing?.subscriptionStatus ?? tenant.subscriptionStatus}
+            </span>
+          </div>
+          <div className="text-sm">
+            <span className="mb-1.5 block font-medium text-content-default">Workspace</span>
+            <span
+              className={`rounded px-2 py-1 text-xs font-semibold uppercase tracking-wide ${
+                tenant.isActive ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+              }`}
+            >
+              {tenant.isActive ? 'Active' : 'Suspended'}
+            </span>
+          </div>
+        </div>
+        <p className="text-xs text-content-muted">
+          Plan, subscription, seat limit and workspace status are managed by your platform operator.
+          Contact them to change your subscription.
+        </p>
 
         <fieldset className="rounded border border-gray-100 p-4">
           <legend className="px-1 text-sm font-medium text-content-default">Operating hours</legend>

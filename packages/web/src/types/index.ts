@@ -3,9 +3,13 @@
  * NOTE: roles are UPPERCASE strings because Prisma enums serialize that way.
  */
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'KITCHEN' | 'SERVER' | 'CUSTOMER';
+export type UserRole = 'PLATFORM_ADMIN' | 'ADMIN' | 'MANAGER' | 'KITCHEN' | 'SERVER' | 'CUSTOMER';
 
+/** Roles that work inside ONE tenant's dashboard shell. */
 export const STAFF_ROLES: UserRole[] = ['ADMIN', 'MANAGER', 'KITCHEN', 'SERVER'];
+
+/** Phase 5 S2.1 — cross-tenant operator role; never a tenant-shell role. */
+export const PLATFORM_ROLES: UserRole[] = ['PLATFORM_ADMIN'];
 
 export interface AuthUser {
   id: string;

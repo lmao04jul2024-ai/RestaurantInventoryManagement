@@ -41,6 +41,15 @@ export interface TenantProfile {
   _count?: { users: number };
 }
 
+/**
+ * Self-service tenant update (15.2/15.3 + Phase 5 S2.6).
+ *
+ * The commercial state — `plan`, `subscriptionStatus`, `seatsLimit` and
+ * `isActive` — is deliberately ABSENT: manual billing means the platform
+ * operator owns it via the audited `/api/platform` surface, and the API's Joi
+ * schema strips those keys from self-service payloads. Read them from
+ * `TenantProfile` / `TenantAnalytics.billing` to display them instead.
+ */
 export interface TenantUpdatePayload {
   name?: string;
   email?: string | null;
@@ -50,9 +59,6 @@ export interface TenantUpdatePayload {
   currency?: string;
   taxRate?: number;
   operatingHours?: OperatingHours | null;
-  plan?: PlanTier;
-  subscriptionStatus?: SubscriptionStatus;
-  isActive?: boolean;
   theme?: TenantTheme | null;
 }
 

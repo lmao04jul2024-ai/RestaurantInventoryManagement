@@ -79,8 +79,12 @@ describe('TenantsPage — Week 15.5/15.6 self-service settings', () => {
 
     await waitFor(() => expect(screen.getByDisplayValue('The Bloom Bistro')).toBeInTheDocument());
     expect(screen.getByText('/the-bloom-bistro')).toBeInTheDocument();
-    expect(screen.getByLabelText('Plan')).toHaveValue('PRO');
-    expect(screen.getByLabelText('Subscription status')).toHaveValue('ACTIVE');
+    // S2.6 — commercial state is displayed, not editable.
+    expect(screen.getByText('Plan')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Plan')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Subscription status')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Workspace active')).not.toBeInTheDocument();
+    expect(screen.getByText(/managed by your platform operator/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Tax rate (%)')).toHaveValue(8.5);
     // Sunday is absent from configured hours → closed.
     expect(screen.getByLabelText('Closed on sunday')).toBeChecked();
@@ -111,10 +115,11 @@ describe('TenantsPage — Week 15.5/15.6 self-service settings', () => {
       timezone: 'America/New_York',
       currency: 'USD',
       taxRate: 8.75,
-      plan: 'PRO',
-      subscriptionStatus: 'ACTIVE',
-      isActive: true,
     });
+    // S2.6 — the self-service payload never carries commercial state.
+    expect(payload).not.toHaveProperty('plan');
+    expect(payload).not.toHaveProperty('subscriptionStatus');
+    expect(payload).not.toHaveProperty('isActive');
     expect(payload.operatingHours).toMatchObject({ monday: { open: '10:00', close: '21:00' }, friday: { open: '10:00', close: '23:00' } });
     expect(payload.operatingHours.sunday).toBeUndefined();
   });
@@ -144,5 +149,16 @@ describe('TenantsPage — Week 15.5/15.6 self-service settings', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('Could not load tenant settings')).toBeInTheDocument());
+  });
+
+  it('explains a suspended workspace without offering self-reactivation (S2.6)', async () => {
+    getTenantFn.mockResolvedValue({ ...TENANT, isActive: false });
+    renderPage();
+
+    await waitFor(() => expect(screen.getByDisplayValue('The Bloom Bistro')).toBeInTheDocument());
+    // Suspension is the operator's lapse lever — the tenant cannot undo it here.
+    expect(screen.getByText('Suspended')).toBeInTheDocument();
+    expect(screen.getByText(/settle your account with your platform operator/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Workspace active')).not.toBeInTheDocument();
   });
 });

@@ -43,7 +43,10 @@ export default function ProtectedRoute({
     if (!isAuthenticated) {
       router.replace(`${redirectTo}?next=${encodeURIComponent(pathname)}`);
     } else if (roles && userRole && !roles.includes(userRole)) {
-      router.replace('/dashboard?error=forbidden');
+      // Phase 5 S2.4 — a platform operator has no tenant dashboard to fall back
+      // to (the API rejects PLATFORM_ADMIN on every tenant surface), so send
+      // them to the console instead of the dashboard's forbidden banner.
+      router.replace(userRole === 'PLATFORM_ADMIN' ? '/platform' : '/dashboard?error=forbidden');
     }
   }, [hydrated, isAuthenticated, userRole, roles, router, pathname, redirectTo]);
 

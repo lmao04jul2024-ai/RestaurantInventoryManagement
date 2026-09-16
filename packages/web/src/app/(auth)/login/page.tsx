@@ -38,8 +38,10 @@ function LoginForm() {
     try {
       await login(values);
       // Week 10: customers land in the ordering experience, staff in the dashboard.
+      // Phase 5 S2.4: platform operators land in the super-admin console.
       const role = useAuthStore.getState().user?.role;
-      const fallback = role === 'CUSTOMER' ? '/menu' : '/dashboard';
+      const fallback =
+        role === 'CUSTOMER' ? '/menu' : role === 'PLATFORM_ADMIN' ? '/platform' : '/dashboard';
       router.replace(params.get('next') ?? fallback);
     } catch (err) {
       setServerError(getApiErrorMessage(err));
