@@ -24,7 +24,7 @@ import recommendationRoutes from './routes/recommendations.routes';
 import recurringRoutes from './routes/recurring-orders.routes';
 import gdprRoutes from './routes/gdpr.routes';
 import securityRoutes from './routes/security.routes';
-import { authRateLimit, globalRateLimit } from './middleware/rate-limit';
+import { authRateLimit, globalRateLimit, tenantRateLimit } from './middleware/rate-limit';
 
 dotenv.config();
 
@@ -53,6 +53,9 @@ app.use(express.urlencoded({ extended: true }));
 // tripwire; details live in docs/security/AUDIT.md. Auth gets a much tighter
 // window to blunt credential stuffing (buckets are keyed separately).
 app.use(globalRateLimit);
+// S1.4 — per-tenant fairness ceiling (keyed on the verified JWT tenant; IP
+// fallback for anonymous traffic) so one busy tenant cannot starve the rest.
+app.use('/api', tenantRateLimit);
 app.use('/api/auth', authRateLimit);
 
 // Request logging (development only)

@@ -42,6 +42,13 @@ disagree with the token. All reads and writes pass through the Week-15
 tenant-scope guard (row-level security): cross-tenant rows are invisible, and
 cross-tenant row access returns `404` (never `403`, to avoid existence leaks).
 
+Subdomain resolution: without extra config, a `demo.api.example.com`-style
+host resolves the slug `demo`. In production set `TENANT_ROOT_DOMAIN`
+(e.g. `yourapp.com`) so ONLY hosts under that root resolve —
+`{tenant}.yourapp.com` and `api.{tenant}.yourapp.com` → slug `{tenant}`;
+the apex/`www` marketing host and foreign domains never resolve a tenant.
+Full isolation audit: [`docs/security/TENANT_ISOLATION_AUDIT.md`](../security/TENANT_ISOLATION_AUDIT.md).
+
 ## Response envelopes
 
 | Shape | When |
@@ -106,8 +113,10 @@ where supported — see the spec's parameters).
 
 ## Rate limiting
 
-Week 22's limiter is applied per IP + tenant with stricter buckets on auth
-routes. On breach the API returns `429 RATE_LIMITED` with `Retry-After`.
+Week 22's limiter is applied per IP with stricter buckets on auth routes
+(Phase 5 S1.4 adds a per-tenant fairness ceiling keyed on the verified JWT
+tenant — one busy workspace cannot starve the others). On breach the API
+returns `429 RATE_LIMITED` with `Retry-After`.
 
 ## Keeping this in sync
 

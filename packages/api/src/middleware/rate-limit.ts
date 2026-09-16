@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { writeSecurityEvent } from '../services/audit';
+import { verifyAccessToken } from '../services/jwt';
 
 /**
  * Week 22.2 — in-memory sliding-window rate limiter.
@@ -118,5 +119,46 @@ export const globalRateLimit = rateLimit({
   windowMs: 60_000,
   max: Number(process.env.RATE_LIMIT_GLOBAL_MAX || 300),
   message: 'Global request rate exceeded.',
+  onLimit,
+});
+
+/**
+ * S1.4 — per-tenant fairness ceiling across the API.
+ *
+ * While the global limiter is per-IP, this bucket is keyed by the *tenant*, so
+ * one busy restaurant (or one runaway integration script) cannot starve the
+ * others. Key priority:
+ *   1. `req.tenantId` — present when authenticate+resolveTenant already ran.
+ *   2. The Bearer JWT's `tenantId` — signature-verified (cheap HMAC, no DB)
+ *      so an attacker cannot forge the claim to poison another tenant's
+ *      bucket; a forged/failing token falls through to the IP bucket.
+ *   3. IP fallback for anonymous traffic (already capped by globalRateLimit).
+ *
+ * Mounted at app level BEFORE the routers, so it sees every /api request.
+ * The ceiling must be generous (default 3000/min per tenant, tunable via
+ * RATE_LIMIT_TENANT_MAX) — it is a runaway-guard, not a normal throttle.
+ */
+export function tenantBucketKey(req: Request): string {
+  const fromReq = (req as unknown as { tenantId?: string }).tenantId;
+  if (fromReq) return `tenant:${fromReq}`;
+
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const payload = verifyAccessToken(auth.slice(7).trim());
+      if (payload?.tenantId) return `tenant:${payload.tenantId}`;
+    } catch {
+      // Invalid/forged token: authenticate will reject it later; rate-bucket
+      // by IP so it cannot ride (or poison) any tenant bucket.
+    }
+  }
+  return `ip:${clientKey(req)}`;
+}
+
+export const tenantRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.RATE_LIMIT_TENANT_MAX || 3000),
+  key: tenantBucketKey,
+  message: 'This workspace is receiving requests too quickly. Please wait and try again.',
   onLimit,
 });

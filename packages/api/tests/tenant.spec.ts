@@ -78,6 +78,64 @@ describe('tenant resolution priority', () => {
   });
 });
 
+describe('S1.3 — TENANT_ROOT_DOMAIN deterministic subdomain resolution', () => {
+  let rootEnv: string | undefined;
+
+  beforeEach(() => {
+    rootEnv = process.env.TENANT_ROOT_DOMAIN;
+    process.env.TENANT_ROOT_DOMAIN = 'yourapp.com';
+  });
+
+  afterEach(() => {
+    if (rootEnv === undefined) delete process.env.TENANT_ROOT_DOMAIN;
+    else process.env.TENANT_ROOT_DOMAIN = rootEnv;
+  });
+
+  it('resolves {tenant}.{root} to a slug lookup', async () => {
+    findFirst.mockResolvedValue(makeTenantRow({ slug: 'acme' }));
+    const { next, res } = await call({ headers: { host: 'acme.yourapp.com' }, query: {} });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ slug: 'acme', isActive: true }) }),
+    );
+    expect(res.statusCode).toBeUndefined();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves api.{tenant}.{root} to the tenant label', async () => {
+    findFirst.mockResolvedValue(makeTenantRow({ slug: 'acme' }));
+    await call({ headers: { host: 'api.acme.yourapp.com:3001' }, query: {} });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ slug: 'acme' }) }),
+    );
+  });
+
+  it('never resolves the apex or www host (marketing site)', async () => {
+    for (const host of ['yourapp.com', 'www.yourapp.com', 'YOURAPP.COM:443']) {
+      const { res, next } = await call({ headers: { host }, query: {} });
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toMatchObject({ error: { code: 'TENANT_REQUIRED' } });
+      expect(next).not.toHaveBeenCalled();
+    }
+  });
+
+  it('never heuristic-resolves hosts outside the configured root', async () => {
+    const { res, next } = await call({ headers: { host: 'demo.api.example.com' }, query: {} });
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(400);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('keeps the legacy heuristic when TENANT_ROOT_DOMAIN is unset', async () => {
+    delete process.env.TENANT_ROOT_DOMAIN;
+    findFirst.mockResolvedValue(makeTenantRow({ slug: 'demo' }));
+    await call({ headers: { host: 'demo.api.example.com' }, query: {} });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ slug: 'demo' }) }),
+    );
+  });
+});
+
 describe('guard rails', () => {
   it('400 TENANT_REQUIRED when unresolvable on localhost', async () => {
     const { res, next } = await call({ headers: { host: 'localhost:3001' }, query: {} });

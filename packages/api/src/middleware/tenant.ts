@@ -19,7 +19,9 @@ export interface TenantRequest extends AuthRequest {
  *   1. X-Tenant-ID header
  *   2. ?tenantId= query parameter
  *   3. User's tenantId from their JWT (if authenticated)
- *   4. Subdomain (e.g. demo.api.example.com -> slug "demo")
+ *   4. Subdomain (e.g. demo.api.example.com -> slug "demo"; when
+ *      TENANT_ROOT_DOMAIN is set, only hosts under that root resolve —
+ *      demo.yourapp.com -> slug "demo", apex/www never resolve)
  */
 export async function resolveTenant(req: TenantRequest, res: Response, next: NextFunction) {
   try {
@@ -142,6 +144,22 @@ function extractSubdomain(host: string): string | null {
   // Skip localhost, IP addresses, and hosts without enough parts
   if (!host || host.startsWith('localhost') || /^\d+\.\d+\.\d+\.\d+/.test(host)) {
     return null;
+  }
+
+  // S1.3 — deterministic production mode: when TENANT_ROOT_DOMAIN is configured
+  // (e.g. "yourapp.com"), ONLY hosts under that root resolve a tenant slug
+  // ({tenant}.yourapp.com, api.{tenant}.yourapp.com). The apex/www marketing
+  // hosts and any foreign domain never resolve a tenant — no heuristic
+  // misfires (e.g. a stray "www" slug probe).
+  const root = process.env.TENANT_ROOT_DOMAIN?.trim().toLowerCase();
+  if (root) {
+    const h = host.split(':')[0].toLowerCase();
+    if (h === root || h === `www.${root}`) return null;
+    const suffix = `.${root}`;
+    if (!h.endsWith(suffix)) return null;
+    const labels = h.slice(0, -suffix.length).split('.');
+    const slug = labels[labels.length - 1];
+    return slug && slug !== 'www' ? slug : null;
   }
 
   const parts = host.split('.');

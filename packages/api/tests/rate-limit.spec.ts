@@ -5,7 +5,9 @@ jest.mock('../src/services/audit', () => ({
 }));
 
 import { NextFunction, Request, Response } from 'express';
-import { rateLimit } from '../src/middleware/rate-limit';
+import { rateLimit, tenantRateLimit, tenantBucketKey } from '../src/middleware/rate-limit';
+import { signAccessToken } from '../src/services/jwt';
+import { UserRole } from '@prisma/client';
 
 /**
  * Week 22.2 — fixed-window limiter behaving as a sliding tripwire: N allowed
@@ -85,4 +87,76 @@ describe('rateLimit middleware', () => {
     expect(blocked.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
     expect(blocked.setHeader).toHaveBeenCalledWith('RateLimit-Policy', expect.stringContaining('max=1'));
   });
+
+describe('S1.4 — tenantRateLimit per-tenant fairness buckets', () => {
+  const reqTenant = (tenantToken?: string, ip = '127.0.0.1', reqTenantId?: string) =>
+    ({
+      ip,
+      path: '/api/x',
+      method: 'GET',
+      headers: tenantToken ? { authorization: `Bearer ${tenantToken}` } : {},
+      ...(reqTenantId ? { tenantId: reqTenantId } : {}),
+    }) as unknown as Request;
+
+  const tokenFor = (tenantId: string) =>
+    signAccessToken({ userId: 'u-1', tenantId, role: UserRole.ADMIN, email: 'a@example.com' });
+
+  it('buckets authenticated requests by tenant, regardless of client IP', () => {
+    const limiter = tenantRateLimit;
+    const tokenA = tokenFor('tenant-a');
+    for (let i = 0; i < 3000; i++) limiter(reqTenant(tokenA, `10.0.0.${i % 250}`), res(), next());
+    // A different IP with the SAME tenant is now inside the shared bucket.
+    const blocked = res();
+    limiter(reqTenant(tokenA, '10.9.9.9'), blocked, next());
+    expect(blocked.status).toHaveBeenCalledWith(429);
+  });
+
+  it('never lets one tenant fill another tenant’s bucket', () => {
+    const limiter = tenantRateLimit;
+    const tokenA = tokenFor('tenant-fill');
+    const tokenB = tokenFor('tenant-victim');
+    for (let i = 0; i < 3000; i++) limiter(reqTenant(tokenA, `10.1.0.${i % 250}`), res(), next());
+    const n = next();
+    const other = res();
+    limiter(reqTenant(tokenB, '10.1.0.7'), other, n); // same IP range, different tenant
+    expect(n).toHaveBeenCalledTimes(1);
+    expect(other.status).not.toHaveBeenCalled();
+  });
+
+  it('a forged token falls back to the IP bucket and cannot poison a tenant bucket', () => {
+    const limiter = tenantRateLimit;
+    const forged = signAccessToken({ userId: 'u-evil', tenantId: 'tenant-victim2', role: UserRole.ADMIN, email: 'e@example.com' });
+    // Tampered signature → verifyAccessToken throws → IP bucket.
+    const broken = `${forged.slice(0, forged.lastIndexOf('.'))}.deadbeef`;
+    for (let i = 0; i < 3500; i++) limiter(reqTenant(broken, `10.2.0.${i % 250}`), res(), next());
+    // Legit tenant-a traffic from a fresh IP is untouched.
+    const n = next();
+    const ok = res();
+    limiter(reqTenant(tokenFor('tenant-legit3'), '10.2.9.9'), ok, n);
+    expect(n).toHaveBeenCalledTimes(1);
+    expect(ok.status).not.toHaveBeenCalled();
+  });
+
+  it('prefers req.tenantId when a downstream middleware already resolved it', () => {
+    const limiter = tenantRateLimit;
+    const tokenA = tokenFor('tenant-reqkey');
+    for (let i = 0; i < 3000; i++) limiter(reqTenant(tokenA, `10.3.0.${i % 250}`), res(), next());
+    // No token at all, but req.tenantId set → same bucket.
+    const blocked = res();
+    limiter(reqTenant(undefined, '10.3.9.9', 'tenant-reqkey'), blocked, next());
+    expect(blocked.status).toHaveBeenCalledWith(429);
+  });
+
+  it('anonymous traffic buckets by IP', () => {
+    const limiter = rateLimit({ windowMs: 60_000, max: 2, key: tenantBucketKey });
+    for (let i = 0; i < 2; i++) limiter(reqTenant(undefined, '10.4.0.1'), res(), next());
+    const blocked = res();
+    limiter(reqTenant(undefined, '10.4.0.1'), blocked, next());
+    expect(blocked.status).toHaveBeenCalledWith(429);
+    const n = next();
+    limiter(reqTenant(undefined, '10.4.0.2'), res(), n);
+    expect(n).toHaveBeenCalledTimes(1);
+  });
+});
+
 });
