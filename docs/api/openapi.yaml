@@ -194,7 +194,11 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Tenants]
-      summary: Update tenant profile / config / billing / theme (MANAGER+)
+      summary: Update tenant profile / config / theme (MANAGER+)
+      description: |
+        Commercial state (`plan`, `subscriptionStatus`, `seatsLimit`, `isActive`)
+        is NOT accepted here (Phase 5 S2.6, manual billing) — those keys are
+        stripped by the schema and change only through `/api/platform/*`.
       requestBody:
         content:
           application/json:
@@ -216,6 +220,79 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TenantAnalytics" }
+
+  # ── Platform (super-admin, Phase 5 S2) ──────────────────────────────────
+  /api/platform/tenants:
+    get:
+      tags: [Platform]
+      summary: List/search all workspaces with usage counts (PLATFORM_ADMIN)
+      description: |
+        Cross-tenant operator surface. Requires the `PLATFORM_ADMIN` role;
+        tenant staff receive `403 FORBIDDEN_ROLE`. No tenant context is
+        resolved — queries scope themselves explicitly.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: search
+          in: query
+          description: Case-insensitive match on name or slug
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated tenant list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PlatformTenantSummary" } }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+        "403": { description: FORBIDDEN_ROLE — caller is not a platform administrator }
+  /api/platform/tenants/{tenantId}:
+    get:
+      tags: [Platform]
+      summary: Workspace detail — usage, billing and the change trail (PLATFORM_ADMIN)
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PlatformTenantDetail" }
+        "404": { description: TENANT_NOT_FOUND }
+    patch:
+      tags: [Platform]
+      summary: Record commercial state by hand — audited (PLATFORM_ADMIN)
+      description: |
+        Manual billing: payments are collected offline and their outcome is
+        recorded here. Only CHANGED fields are written and audited (a no-op
+        patch persists and audits nothing). Each change appends a
+        `platform:tenant.updated` audit row carrying the field-level diff.
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformTenantUpdateRequest" }
+      responses:
+        "200": { description: Updated tenant }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: TENANT_NOT_FOUND }
+        "409": { description: SEATS_BELOW_USAGE — seat limit below the current user count }
 
   # ── Users ───────────────────────────────────────────────────────────────
   /api/users/me:
@@ -1139,6 +1216,93 @@ components:
             limit: { type: integer }
             total: { type: integer }
             totalPages: { type: integer }
+
+    Pagination:
+      type: object
+      description: List envelope shared by paginated endpoints.
+      properties:
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 42 }
+        totalPages: { type: integer, example: 3 }
+
+    # ── Platform (super-admin, Phase 5 S2) ──────────────────────────────────
+    PlatformTenantSummary:
+      type: object
+      description: Operator-facing workspace row.
+      properties:
+        id: { type: string }
+        name: { type: string, example: The Bloom Bistro }
+        slug: { type: string, example: the-bloom-bistro }
+        email: { type: string, format: email, nullable: true }
+        plan: { type: string, enum: [TRIAL, BASIC, PRO, ENTERPRISE] }
+        subscriptionStatus: { type: string, enum: [TRIAL, ACTIVE, PAST_DUE, CANCELLED] }
+        seatsLimit: { type: integer, example: 10 }
+        isActive:
+          type: boolean
+          description: false = operator-suspended (members see 403 WORKSPACE_INACTIVE)
+        createdAt: { type: string, format: date-time }
+        _count:
+          type: object
+          description: Usage counters (list endpoints omit `suppliers`).
+          properties:
+            users: { type: integer, example: 3 }
+            orders: { type: integer, example: 40 }
+            menus: { type: integer, example: 4 }
+            inventory: { type: integer, example: 22 }
+
+    PlatformTenantUpdateRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Commercial state recorded by hand — manual billing, no payment processor.
+        Only CHANGED fields are written; a no-op patch persists and audits nothing.
+      properties:
+        plan: { type: string, enum: [TRIAL, BASIC, PRO, ENTERPRISE] }
+        subscriptionStatus: { type: string, enum: [TRIAL, ACTIVE, PAST_DUE, CANCELLED] }
+        seatsLimit: { type: integer, minimum: 1, maximum: 10000 }
+        isActive: { type: boolean }
+
+    PlatformTenantDetail:
+      allOf:
+        - $ref: "#/components/schemas/PlatformTenantSummary"
+        - type: object
+          properties:
+            _count:
+              type: object
+              properties:
+                suppliers: { type: integer, example: 5 }
+            billing:
+              type: object
+              properties:
+                seatsUsed: { type: integer, example: 3 }
+                seatsLimit: { type: integer, example: 10 }
+            recentChanges:
+              type: array
+              description: |
+                The workspace's immutable `platform:tenant.updated` audit rows
+                (newest first) — the manual-billing ledger shown in the console.
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  actorId: { type: string, example: u-platform }
+                  action: { type: string, example: platform:tenant.updated }
+                  targetType: { type: string, example: Tenant }
+                  targetId: { type: string }
+                  createdAt: { type: string, format: date-time }
+                  metadata:
+                    type: object
+                    properties:
+                      surface: { type: string, example: platform }
+                      changes:
+                        type: object
+                        description: 'Field → {from, to} diff of a single change'
+                        additionalProperties:
+                          type: object
+                          properties:
+                            from: {}
+                            to: {}
 
     RegisterRequest:
       type: object

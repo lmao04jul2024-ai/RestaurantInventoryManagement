@@ -24,6 +24,7 @@ import recommendationRoutes from './routes/recommendations.routes';
 import recurringRoutes from './routes/recurring-orders.routes';
 import gdprRoutes from './routes/gdpr.routes';
 import securityRoutes from './routes/security.routes';
+import platformRoutes from './routes/platform.routes';
 import { authRateLimit, globalRateLimit, tenantRateLimit } from './middleware/rate-limit';
 
 dotenv.config();
@@ -103,6 +104,8 @@ app.use('/api/recurring-orders', recurringRoutes);
 app.use('/api/me', gdprRoutes);
 // Week 22.6 — security monitoring & control-objectives health (ADMIN).
 app.use('/api/security', securityRoutes);
+// Phase 5 S2.2 — platform super-admin surface (PLATFORM_ADMIN role only).
+app.use('/api/platform', platformRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);

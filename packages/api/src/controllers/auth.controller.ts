@@ -15,6 +15,7 @@ import {
 import { TenantRequest } from '../middleware/tenant';
 import { AuthRequest } from '../middleware/auth';
 import { runWithTenant } from '../services/tenant-context';
+import { seatsService } from '../services/seats';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 
@@ -72,6 +73,12 @@ export async function register(req: TenantRequest, res: Response, next: NextFunc
     // First user in a tenant becomes ADMIN, subsequent registrations are CUSTOMERs
     const userCount = await prisma.user.count({ where: { tenantId } });
     const role = userCount === 0 ? 'ADMIN' : 'CUSTOMER';
+
+    // S2.5 — manual-billing seat ceiling: CUSTOMER signups consume a seat too.
+    // (ADMIN first-user creation is the bootstrap and bypasses this check.)
+    if (role !== 'ADMIN') {
+      await seatsService.enforceSeats(tenantId);
+    }
 
     const emailVerifyToken = crypto.randomBytes(32).toString('hex');
 

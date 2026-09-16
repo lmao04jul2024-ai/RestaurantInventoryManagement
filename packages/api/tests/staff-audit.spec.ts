@@ -8,6 +8,9 @@ jest.mock('../src/services/database', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+    },
     auditLog: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -70,7 +73,19 @@ const staffRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  // clearAllMocks does NOT remove implementations set via mockResolvedValue —
+  // a list test's $transaction stub would otherwise leak into the seats
+  // ceiling below. Restore the pass-through behaviour every time.
+  (prisma.$transaction as jest.Mock).mockReset().mockImplementation(
+    async (ops: unknown[]) => Promise.all(ops as Promise<unknown>[]),
+  );
+  // S2.5 — the seats ceiling (user.count + tenant.seatsLimit) runs on every
+  // create path. Defaults keep it within limits; individual tests override.
+  (prisma.user.count as jest.Mock).mockResolvedValue(4);
+  (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ seatsLimit: 25 });
+});
 
 // ── 16.5 — override-aware permission checks (pure) ───────────────────────────
 
@@ -175,6 +190,8 @@ describe('createStaff', () => {
 
   it('hashes the password, creates the user and audits staff.created', async () => {
     (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+    // S2.5 — the seats ceiling reads tenant.seatsLimit via findUnique before create.
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ seatsLimit: 25 });
     (prisma.user.create as jest.Mock).mockResolvedValue(staffRow({ email: payload.email, role: 'SERVER' }));
 
     const { res } = await run(createStaff, staffReq({ body: payload }));

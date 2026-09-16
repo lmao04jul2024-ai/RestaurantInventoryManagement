@@ -14,6 +14,7 @@ import {
 } from '../utils/validation';
 import { OVERRIDEABLE_ROLES } from '../middleware/rbac';
 import { writeAuditLog, listAuditLogs } from '../services/audit';
+import { seatsService } from '../services/seats';
 import { normalizeOverrides } from '../services/feature-flags';
 
 /**
@@ -106,6 +107,8 @@ export async function createStaff(req: TenantRequest, res: Response, next: NextF
     if (existing) throw httpError(409, 'EMAIL_TAKEN', 'A user with this email already exists');
 
     const passwordHash = await bcrypt.hash(data.password, 12);
+    // S2.5 — manual-billing seat ceiling applies to staff creation/invites.
+    await seatsService.enforceSeats(tenantId);
     const user = await prisma.user.create({
       data: {
         email: data.email,

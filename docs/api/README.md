@@ -79,14 +79,40 @@ Full isolation audit: [`docs/security/TENANT_ISOLATION_AUDIT.md`](../security/TE
 | Security | `/api/security/*` | event feed with 24h rollup, control-objectives health (ADMIN, Week 22) |
 | Staff | `/api/staff/*`, `/api/users/*` | invitations, roles, per-user permission overrides (Week 16) |
 | Audit | `/api/audit-logs` | immutable action log (ADMIN) |
+| Platform | `/api/platform/*` | super-admin (PLATFORM_ADMIN): tenant list/search, usage, audited plan/status/seats/suspension (Phase 5 S2) |
 
 ## RBAC
 
-Roles are hierarchical: `ADMIN > MANAGER > KITCHEN/SERVER > CUSTOMER`.
+Roles are hierarchical **within a tenant**: `ADMIN > MANAGER > KITCHEN/SERVER > CUSTOMER`.
 Permission strings (`menu:read`, `inventory:manage`, `analytics:read`, …) gate
 individual routes via `requirePermission(...)`. Week 16 per-user overrides can
 deny a role-granted permission or grant beyond the role — overrides always win.
 Feature-flagged routes fail **closed** with `403 FEATURE_DISABLED`.
+
+Phase 5 adds `PLATFORM_ADMIN`, which sits **outside** the tenant ladder: it
+outranks `ADMIN` numerically but `resolveTenant` rejects it outright
+(`403 PLATFORM_ADMIN_FORBIDDEN`), so the role can never act on a tenant surface
+even though `requireRoleOrHigher(ADMIN)` would otherwise admit it. The reverse
+holds too — tenant staff hitting `/api/platform/*` get `403 FORBIDDEN_ROLE`.
+
+## Commercial state & manual billing (Phase 5 S2)
+
+`plan`, `subscriptionStatus`, `seatsLimit` and `isActive` are **operator-only**.
+There is no payment processor: payments are collected out of band and the
+operator records the outcome through `PATCH /api/platform/tenants/:id`, which
+writes an immutable `platform:tenant.updated` audit row (actor, timestamp,
+field-level from→to diff) into the affected tenant's scope. That trail — surfaced
+as `recentChanges` on `GET /api/platform/tenants/:id` — is the billing ledger.
+
+Consequences for tenant-facing surfaces:
+
+- `PATCH /api/tenants/me` strips those four fields from its payload (Joi), so a
+  workspace can never change its own plan **or lift its own suspension**.
+- Seat limits are enforced at every user-creation path (`register`, `POST /api/staff`)
+  with `409 SEATS_LIMIT_REACHED`; `seatsLimit` cannot be lowered below current
+  usage (`409 SEATS_BELOW_USAGE`).
+- Suspension keeps the `WORKSPACE_INACTIVE` recovery semantics below, but the
+  tenant can no longer self-reactivate — the operator must do it.
 
 ## Error codes
 
@@ -94,11 +120,16 @@ Feature-flagged routes fail **closed** with `403 FEATURE_DISABLED`.
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Body/query/params failed Joi schema (`details[]` names the fields) |
 | `UNAUTHENTICATED` | 401 | Missing/expired token |
+| `FORBIDDEN_ROLE` | 403 | Authenticated but the wrong role for this surface (e.g. tenant ADMIN on `/api/platform/*`) |
+| `PLATFORM_ADMIN_FORBIDDEN` | 403 | `PLATFORM_ADMIN` attempted a tenant surface — the operator role has no tenant context |
 | `FORBIDDEN_PERMISSION` | 403 | Authenticated but lacking permission (or deny-override) |
 | `TENANT_MISMATCH` | 403 | Header/query tenant disagrees with JWT |
-| `WORKSPACE_INACTIVE` | 403 | Tenant deactivated — members keep GET/PATCH `/api/tenants/me` to re-enable "Workspace active"; every other surface is blocked |
+| `WORKSPACE_INACTIVE` | 403 | Tenant suspended by the operator — members keep GET/PATCH `/api/tenants/me` to read settings; every other surface is blocked. Reactivation is operator-only (S2.6) |
 | `FEATURE_DISABLED` | 403 | Feature flag off for this tenant |
 | `ORDER_NOT_FOUND` etc. | 404 | Resource absent **or** cross-tenant (indistinguishable) |
+| `TENANT_NOT_FOUND` | 404 | Unknown tenant id on the platform surface |
+| `SEATS_LIMIT_REACHED` | 409 | User creation/invite would exceed the plan's `seatsLimit` (S2.5) |
+| `SEATS_BELOW_USAGE` | 409 | Operator tried to set `seatsLimit` below the current user count |
 | `INSUFFICIENT_LOYALTY` | 409 | Redemption exceeded balance |
 | `GROUP_CLOSED` / `GROUP_HOST_ONLY` / `GROUP_ITEM_FORBIDDEN` | 403/409 | Group-order rules |
 | `PROMO_INVALID` | 400 | Unknown/expired/promo-limit-exceeded code |
