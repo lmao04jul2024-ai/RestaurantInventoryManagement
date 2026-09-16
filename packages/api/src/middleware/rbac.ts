@@ -17,6 +17,10 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.KITCHEN]: 2,
   [UserRole.MANAGER]: 3,
   [UserRole.ADMIN]: 4,
+  // S2.1 — platform operator outranks tenant ADMIN, but is not part of the
+  // tenant role ladder: requireRoleOrHigher(ADMIN) must NOT admit them into
+  // tenant surfaces (resolveTenant rejects the role outright).
+  [UserRole.PLATFORM_ADMIN]: 5,
 };
 
 /**
@@ -108,6 +112,35 @@ export function requireRoleOrHigher(minimumRole: UserRole) {
 }
 
 /**
+ * S2.1 — platform-operator guard for the super-admin surface (/api/platform/*).
+ * Distinct from tenant ADMIN by ROLE, not by permission matrix: only the
+ * PLATFORM_ADMIN role passes. Mount AFTER authenticate.
+ */
+export function requirePlatformAdmin() {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: {
+          code: 'UNAUTHENTICATED',
+          message: 'Authentication required before role check',
+        },
+      });
+    }
+
+    if (req.user.role !== UserRole.PLATFORM_ADMIN) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN_ROLE',
+          message: 'This surface is restricted to platform administrators',
+        },
+      });
+    }
+
+    next();
+  };
+}
+
+/**
  * Permission matrix for feature-level access control
  * Maps role -> list of allowed permissions
  */
@@ -141,7 +174,11 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'feature-flag:read',
     'feature-flag:manage',
   ],
-  [UserRole.ADMIN]: ['*'], // Full access
+  [UserRole.ADMIN]: ['*'], // Full access (within one tenant)
+  // S2.1 — platform operator: cross-tenant surface only. It never flows through
+  // resolveTenant/tenant permission checks, so this entry exists so the matrix
+  // lookup cannot crash; the platform routes guard with requirePlatformAdmin.
+  [UserRole.PLATFORM_ADMIN]: ['*'],
 };
 
 function hasPermission(userRole: UserRole, required: string): boolean {

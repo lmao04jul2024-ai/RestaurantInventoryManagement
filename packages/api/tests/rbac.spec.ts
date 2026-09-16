@@ -99,10 +99,15 @@ describe('requirePermission (matrix)', () => {
 });
 
 describe('PERMISSIONS invariants', () => {
-  it('admin is the sole holder of the global wildcard', () => {
+  it('ADMIN and PLATFORM_ADMIN are the only wildcard holders', () => {
     for (const [role, perms] of Object.entries(PERMISSIONS)) {
-      if (role !== UserRole.ADMIN) expect(perms).not.toContain('*');
+      // S2.1 — PLATFORM_ADMIN is a role-gated cross-tenant surface, never a
+      // tenant-surface permission holder; it still sits outside tenant RBAC.
+      if (role !== UserRole.ADMIN && role !== UserRole.PLATFORM_ADMIN) {
+        expect(perms).not.toContain('*');
+      }
     }
     expect(PERMISSIONS[UserRole.ADMIN]).toEqual(['*']);
+    expect(PERMISSIONS[UserRole.PLATFORM_ADMIN]).toEqual(['*']);
   });
 });

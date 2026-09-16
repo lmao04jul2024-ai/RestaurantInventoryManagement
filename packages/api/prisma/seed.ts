@@ -6,6 +6,36 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
+  // Phase 5 S2.1 — platform operations tenant + super-admin (idempotent).
+  const platformTenant = await prisma.tenant.upsert({
+    where: { slug: 'platform' },
+    update: {},
+    create: {
+      name: 'Platform Operations',
+      slug: 'platform',
+      email: 'platform@yourapp.com',
+      plan: 'ENTERPRISE',
+      subscriptionStatus: 'ACTIVE',
+      seatsLimit: 5,
+    },
+  });
+  const platformAdminEmail = (process.env.PLATFORM_ADMIN_EMAIL || 'platform@yourapp.com').toLowerCase();
+  await prisma.user.upsert({
+    where: { email_tenantId: { email: platformAdminEmail, tenantId: platformTenant.id } },
+    update: { role: UserRole.PLATFORM_ADMIN },
+    create: {
+      email: platformAdminEmail,
+      // Dev-only default; rotate in production. Overridable via PLATFORM_ADMIN_PASSWORD.
+      password: await bcrypt.hash(process.env.PLATFORM_ADMIN_PASSWORD || 'ChangeMe!Platform2026', 12),
+      firstName: 'Platform',
+      lastName: 'Admin',
+      role: UserRole.PLATFORM_ADMIN,
+      tenantId: platformTenant.id,
+      emailVerified: true,
+    },
+  });
+  console.log('✅ Platform admin seeded:', platformAdminEmail);
+
   // Create demo tenant
   const tenant = await prisma.tenant.create({
     data: {

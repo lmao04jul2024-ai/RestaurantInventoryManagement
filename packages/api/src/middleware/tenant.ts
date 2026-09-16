@@ -63,9 +63,11 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
     }
 
     // Look up tenant to verify it exists. For id lookups we deliberately do NOT
-    // filter on isActive here — an inactive workspace's members must still be
-    // able to reach the self-service settings endpoints to reactivate it
-    // (otherwise deactivating the workspace bricks it with no recovery path).
+    // filter on isActive here — a suspended workspace's members must still be
+    // able to reach the self-service settings endpoints to read their profile
+    // and settle the account. Reactivation itself is operator-only (Phase 5
+    // S2.6: isActive is stripped from self-service updates), but blocking
+    // settings entirely would brick the workspace with no way to see why.
     // Slug lookups (public storefront paths) keep the isActive filter.
     const tenant = await prisma.tenant.findFirst({
       where:
@@ -77,6 +79,18 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
         error: {
           code: 'TENANT_NOT_FOUND',
           message: 'Tenant not found or inactive',
+        },
+      });
+    }
+
+    // S2.1 — tenant surfaces reject the platform-operator role outright: it is a
+    // cross-tenant surface role with no tenant context. Non-members/unauthenticated
+    // still see the same errors as before.
+    if (req.user?.role === 'PLATFORM_ADMIN') {
+      return res.status(403).json({
+        error: {
+          code: 'PLATFORM_ADMIN_FORBIDDEN',
+          message: 'Platform administrators must use the /api/platform surface',
         },
       });
     }
@@ -106,7 +120,7 @@ export async function resolveTenant(req: TenantRequest, res: Response, next: Nex
           error: {
             code: 'WORKSPACE_INACTIVE',
             message:
-              'This workspace is inactive. Open Settings and re-enable "Workspace active" to restore access.',
+              'This workspace is suspended. Contact your platform operator to restore access.',
           },
         });
       }

@@ -185,7 +185,10 @@ describe('guard rails', () => {
       expect(next).toHaveBeenCalledTimes(1);
     });
 
-    it('lets a member PATCH their settings while inactive (reactivation path)', async () => {
+    // S2.6 — reactivation itself is operator-only now; what this preserves is
+    // that a suspended member can still LOAD and save their non-commercial
+    // settings (so the workspace isn't bricked while they settle the account).
+    it('lets a member PATCH their non-commercial settings while inactive (settings recovery path)', async () => {
       findFirst.mockResolvedValue(inactiveRow);
       const { next } = await call({
         headers: { 'x-tenant-id': 't-inactive' },

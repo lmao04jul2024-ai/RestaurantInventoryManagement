@@ -17,6 +17,9 @@ enum UserRole {
   KITCHEN
   MANAGER
   ADMIN
+  // S2.1 — Phase 5: platform operator (super-admin). Cross-tenant surface only;
+  // resolveTenant REJECTS this role on every tenant surface.
+  PLATFORM_ADMIN
 }
 
 enum OrderStatus {
