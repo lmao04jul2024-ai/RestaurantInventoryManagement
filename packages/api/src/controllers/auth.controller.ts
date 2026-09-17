@@ -16,6 +16,11 @@ import { TenantRequest } from '../middleware/tenant';
 import { AuthRequest } from '../middleware/auth';
 import { runWithTenant } from '../services/tenant-context';
 import { seatsService } from '../services/seats';
+import {
+  sendAccountVerification,
+  sendPasswordResetEmail,
+  appBaseUrl,
+} from '../services/email-lifecycle';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 
@@ -107,8 +112,10 @@ export async function register(req: TenantRequest, res: Response, next: NextFunc
     const { rawToken } = await createSession(user.id);
     const refreshToken = signRefreshToken({ userId: user.id, tokenId: rawToken });
 
-    // TODO (Week 3.6): send verification email with emailVerifyToken via SMTP
-    console.log(`[auth] Verification token for ${user.email}: ${emailVerifyToken}`);
+    // S3.3 — wire the verification email through the mailer abstraction
+    // (dev-logs by default; real SMTP via SMTP_HOST in prod). The token stays
+    // server-only; only a link is emailed.
+    void sendAccountVerification(user.email, emailVerifyToken);
 
     res.status(201).json({
       user: publicUser(user),
@@ -181,9 +188,9 @@ export async function login(req: TenantRequest, res: Response, next: NextFunctio
 
     // The Prisma tenant guard only rewrites queries under a tenant context;
     // run downstream work inside the matched user's tenant for consistent scoping.
-    const { rawToken, refreshToken } = await runWithTenant(user.tenantId, async () => {
+    const refreshToken = await runWithTenant(user.tenantId, async () => {
       const { rawToken: t } = await createSession(user.id);
-      return { rawToken: t, refreshToken: signRefreshToken({ userId: user.id, tokenId: t }) };
+      return signRefreshToken({ userId: user.id, tokenId: t });
     });
 
     res.json({
@@ -301,8 +308,9 @@ export async function forgotPassword(req: TenantRequest, res: Response, next: Ne
         },
       });
 
-      // TODO (Week 3.6): send reset email via SMTP service
-      console.log(`[auth] Password reset token for ${user.email}: ${resetToken} (expires ${expiresAt.toISOString()})`);
+      // S3.3 — route the reset link through the templated mailer instead of
+      // logging the token to stdout.
+      void sendPasswordResetEmail(user.email, resetToken, appBaseUrl());
     }
 
     res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
