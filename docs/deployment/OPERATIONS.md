@@ -73,6 +73,33 @@ in `docs/security/AUDIT.md`.
 - **Never** log tokens or passwords; the dev-only token logging noted in `docs/security/AUDIT.md` must be gated off before launch.
 - Audit trail (`AuditLog`) is insert-only, retained 24 months — exclude it from TRUNCATE-style resets.
 
+### S4.2 — per-tenant structured logs (multi-tenant operations)
+
+Every API request emits **one single-line JSON record** on completion, plus a
+`server_error` record for any 5xx. All records carry:
+
+| Field | Meaning |
+|---|---|
+| `requestId` | Correlation id; echoed from the client's `X-Request-Id` or generated (UUID v4). Also returned in the `X-Request-Id` response header. |
+| `tenantId` | The workspace the request acted on (tenant context → JWT claims → `X-Tenant-ID` header). `undefined` for unauthenticated/probe traffic. |
+| `method`, `path`, `status`, `durationMs` | Request shape and latency. |
+| `level` | `debug` for `/health` and `/` (probe noise); `info` otherwise; `error` for 5xx (`message: "server_error"`, includes `code` + `stack`). |
+
+Level is controlled by `LOG_LEVEL` (default `info`; `debug` in development).
+
+**Per-tenant operations:**
+- Pull every line for one workspace with a plain filter: `tenant_id="<id>"`.
+- Pull every line for one failing request: `request_id="<id>"` (works across
+  web → api when the edge propagates `X-Request-Id`).
+- Billing disputes: combine `tenant_id` filter with the `platform:tenant.updated`
+  audit trail (see the platform console change history).
+
+**Monitoring hooks (ship these to your alerting pipeline):**
+- Page on: `server_error` records with `code=INTERNAL_ERROR` (>2/5min), any
+  `status>=500` burst for a single `tenantId`, and p95 `durationMs` regression.
+- The security-event stream (`docs/security/AUDIT.md`, `writeSecurityEvent`)
+  remains the auth/abuse signal — feed both streams to the same pipeline.
+
 ## Weekly ops checklist
 - [ ] `/health` monitored + paging path tested
 - [ ] Nightly backups present (Mon–Sun) and one checksum spot-verified

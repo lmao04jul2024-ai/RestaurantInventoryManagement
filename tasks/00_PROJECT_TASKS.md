@@ -240,7 +240,7 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 
 ### S-Week 4: Launch Readiness (Phase E)
 - [ ] **S4.1** Single production deployment (existing Docker/compose → cloud host, managed Postgres, backups verified)
-- [ ] **S4.2** Per-tenant log tagging + monitoring hooks (extends docs/deployment OPERATIONS runbooks)
+- [x] **S4.2** Per-tenant log tagging + monitoring hooks (extends docs/deployment OPERATIONS runbooks) *(structured winston logger (JSON→stdout, LOG_LEVEL) — attachLogContext (X-Request-Id echo/generate) + requestLogger finish-hook resolving tenantId AFTER auth (context→JWT→X-Tenant-ID); errorHandler 5xx → tagged server_error records; OPERATIONS.md runbook section with per-tenant filtering + alert hooks; 5 tests in observability.spec.ts)*
 - [ ] **S4.3** Marketing site: pricing page (manual-billing "contact to subscribe" CTA, no checkout), demo video, trial signup funnel to /onboarding
 - [ ] **S4.4** Go-live checklist update in docs/deployment for multi-tenant operations (tenant provisioning runbook, offboarding/data-retention policy)
 

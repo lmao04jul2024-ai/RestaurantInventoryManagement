@@ -27,6 +27,7 @@ import securityRoutes from './routes/security.routes';
 import platformRoutes from './routes/platform.routes';
 import dataExportRoutes from './routes/data-export.routes';
 import { authRateLimit, globalRateLimit, tenantRateLimit } from './middleware/rate-limit';
+import { attachLogContext, requestLogger } from './services/logger';
 
 dotenv.config();
 
@@ -60,13 +61,12 @@ app.use(globalRateLimit);
 app.use('/api', tenantRateLimit);
 app.use('/api/auth', authRateLimit);
 
-// Request logging (development only)
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, _res, next) => {
-    console.log(`${req.method} ${req.path}`);
-    next();
-  });
-}
+// S4.2 — per-tenant structured logging. Context first (assigns/echoes
+// X-Request-Id), then the finish-hook logger, which resolves the tenant tag
+// AFTER auth has run. One JSON line per request: method/path/status/duration
+// + tenantId + requestId — see docs/deployment/OPERATIONS.md.
+app.use(attachLogContext);
+app.use(requestLogger);
 
 // Health check
 app.get('/health', (_req, res) => {
