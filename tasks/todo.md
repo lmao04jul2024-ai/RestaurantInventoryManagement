@@ -5,7 +5,7 @@
 - [x] Fix Docker build context/workspace installs and rebuild API/web.
 - [x] Back up PostgreSQL, deploy migration, and provision only the platform account.
 - [x] Recreate app containers; verify health, web routes, and authenticated platform access.
-- [ ] Record verification results and update Memory MCP before closure.
+- [x] Record verification results and update Memory MCP before closure.
 
 
 # Session 2026-09-10 — Visual rebrand + admin-login fix + CSS pipeline fix
