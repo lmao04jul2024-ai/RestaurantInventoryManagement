@@ -25,6 +25,7 @@ import recurringRoutes from './routes/recurring-orders.routes';
 import gdprRoutes from './routes/gdpr.routes';
 import securityRoutes from './routes/security.routes';
 import platformRoutes from './routes/platform.routes';
+import dataExportRoutes from './routes/data-export.routes';
 import { authRateLimit, globalRateLimit, tenantRateLimit } from './middleware/rate-limit';
 
 dotenv.config();
@@ -106,6 +107,8 @@ app.use('/api/me', gdprRoutes);
 app.use('/api/security', securityRoutes);
 // Phase 5 S2.2 — platform super-admin surface (PLATFORM_ADMIN role only).
 app.use('/api/platform', platformRoutes);
+// S3.2 — tenant data export (churn-safety).
+app.use('/api/data-export', dataExportRoutes);
 
 // 404 + global error handling (must be last)
 app.use(notFoundHandler);
