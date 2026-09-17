@@ -21,6 +21,15 @@
   Postgres/Redis on all interfaces; `NEXT_PUBLIC_API_URL=http://localhost:3001` is baked at build time; no TLS edge/wildcard
   cert for `TENANT_ROOT_DOMAIN` subdomains; nightly `scripts/backup.sh` cron + offsite copy not yet scheduled.
 
+## Clarification (2026-09-17) — what "do these on day 1" meant
+"Day 1" items are **repo production-readiness gaps, not host-plan gaps** — buying a bigger VPS fixes none of them.
+Verified evidence: `grep -rl 'localhost:3001' packages/web/.next/static` → **5 built client chunks**
+(`app/layout.js`, `app/(auth)/login/page.js`, `app/(dashboard)/{layout,dashboard,tenants}/…`) contain the dev API URL,
+because `NEXT_PUBLIC_API_URL` is inlined at `next build` (`packages/web/src/lib/api.ts:10-14`) while `Dockerfile`'s
+`web-builder` stage declares no build ARG for it and `docker-compose.yml:60` sets it only at runtime. No nginx/Caddy
+config exists in-repo (only prose in `docs/deployment/README.md:94`). Scope: the VPS hosts **web + api + postgres + redis**;
+the React Native app is client-side (Metro is dev-only) and only needs the public API URL at its own build time.
+
 # Session 2026-09-17 (b) — Self-service password change (platform operator) + console column rationale
 
 
