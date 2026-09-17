@@ -7,9 +7,6 @@ dist/
 # Environment variables
 .env
 
-# Prisma
-prisma/migrations/
-
 # Testing
 coverage/
 

@@ -1,3 +1,13 @@
+# Session 2026-09-17 — Refresh local Docker stack and restore platform login
+
+- [x] Inspect running images, schema drift, seed behavior, and build setup.
+- [ ] Add the missing PLATFORM_ADMIN migration (no database reset).
+- [ ] Fix Docker build context/workspace installs and rebuild API/web.
+- [ ] Back up PostgreSQL, deploy migration, and provision only the platform account.
+- [ ] Recreate app containers; verify health, web routes, and authenticated platform access.
+- [ ] Record verification results and update Memory MCP before closure.
+
+
 # Session 2026-09-10 — Visual rebrand + admin-login fix + CSS pipeline fix
 
 ## 1. Warm Hospitality visual refresh (user-requested, out-of-roadmap)
