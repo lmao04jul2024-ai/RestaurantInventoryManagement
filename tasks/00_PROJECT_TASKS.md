@@ -232,9 +232,9 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **S2.6** Remove/hide self-serve plan-change actions from /dashboard/tenants; keep plan/usage read-only
 
 ### S-Week 3: Onboarding & Retention (Phase D)
-- [ ] **S3.1** Guided onboarding wizard on top of /onboarding: profile → inventory import (CSV/Excel) → suppliers → thresholds → invite team
-- [ ] **S3.2** Data export for tenants (CSV of inventory/orders/menu) — churn-safety feature
-- [ ] **S3.3** Email lifecycle: verification, team invites, trial-expiring reminder (mail provider abstraction + templates)
+- [x] **S3.1** Guided onboarding wizard on top of /onboarding: profile → inventory import (CSV/Excel) → suppliers → thresholds → invite team *(commits e6a17a5 + a87ff4e: header-tolerant CSV parse with dryRun preview + per-row errors, supplier name match/create resolution, SKU-dup guard; web import panel with tabs + inventory-dashboard import tab, MANAGER+ route guard, typed service + hook + factory-driven tests; tracker re-synced here 2026-09-16)*
+- [x] **S3.2** Data export for tenants (CSV of inventory/orders/menu) — churn-safety feature *(GET /api/data-export?type=inventory|menu|orders&format=csv|pdf — reuses report-export's toCsv/toPdf; inventory & orders scoped by direct tenantId, menu scoped via category→menu tenantId (MenuItem has no own tenantId); auth+resolveTenant guarded; 6 controller tests in data-export.spec.ts)*
+- [x] **S3.3** Email lifecycle: verification, team invites, trial-expiring reminder *(S3.3: `email-lifecycle.ts` service wrapping the existing `mailer.ts` abstraction — sendAccountVerification (register), sendPasswordResetEmail (forgot), sendTeamInvite, sendRenewalReminder; wired into auth.controller replacing the `console.log` TODOs; 7 tests in `email-lifecycle.spec.ts`; dev-logs by default, SMTP_HOST swap-in for prod; manual-billing nudge semantics)*
 - [ ] **S3.4** Operator attention list: admin console banner/queue of tenants needing manual action (trial ending, PAST_DUE)
 - [ ] **S3.5** Tenant-facing usage + entitlement display polish (what plan includes vs what's consumed)
 
