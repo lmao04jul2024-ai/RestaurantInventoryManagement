@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requirePlatformAdmin } from '../middleware/rbac';
-import { listPlatformTenants, getPlatformTenant, updatePlatformTenant } from '../controllers/platform.controller';
+import {
+  listPlatformTenants,
+  getPlatformTenant,
+  updatePlatformTenant,
+  listAttentionTenants,
+} from '../controllers/platform.controller';
 
 /**
  * Phase 5 S2.2 — platform (super-admin) routes.
@@ -16,6 +21,7 @@ router.use(authenticate);
 router.use(requirePlatformAdmin());
 
 router.get('/tenants', listPlatformTenants);
+router.get('/attention', listAttentionTenants);
 router.get('/tenants/:tenantId', getPlatformTenant);
 router.patch('/tenants/:tenantId', updatePlatformTenant);
 

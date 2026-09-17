@@ -92,6 +92,75 @@ export async function listPlatformTenants(req: AuthRequest, res: Response, next:
  * first, so the console can answer "who changed the plan, and when" directly
  * from our own records (manual billing disputes never need an external ledger).
  */
+/**
+ * S3.4 — operator attention list (GET /api/platform/attention).
+ *
+ * The operator's manual-billing queue: every workspace that currently needs a
+ * human decision, with machine-readable reasons. A workspace lands here when:
+ *
+ *  - it is suspended (isActive=false)          → SUSPENDED
+ *  - its subscription is PAST_DUE / CANCELLED  → PAST_DUE / CANCELLED
+ *  - it is still a running TRIAL within the    → TRIAL_ENDING
+ *    warning window before expiry
+ *  - its TRIAL has run past TRIAL_LENGTH_DAYS  → TRIAL_EXPIRED
+ *
+ * Trial timing is derived from `createdAt` (no separate schema field): the
+ * workspace is "born" the day it signed up. Reasons are computed server-side
+ * so the console banner and any future notification job agree on one truth.
+ */
+
+const TRIAL_LENGTH_DAYS = 30;
+const TRIAL_WARNING_DAYS = 7;
+const DAY_MS = 86_400_000;
+
+export async function listAttentionTenants(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const tenants = await prisma.tenant.findMany({
+      where: {
+        OR: [
+          { isActive: false },
+          { subscriptionStatus: { in: ['PAST_DUE', 'CANCELLED'] } },
+          { plan: 'TRIAL', subscriptionStatus: 'TRIAL' },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        email: true,
+        plan: true,
+        subscriptionStatus: true,
+        seatsLimit: true,
+        isActive: true,
+        createdAt: true,
+        _count: { select: { users: true } },
+      },
+    });
+
+    const now = Date.now();
+    const data = tenants
+      .map((t) => {
+        const reasons: string[] = [];
+        if (!t.isActive) reasons.push('SUSPENDED');
+        if (t.subscriptionStatus === 'PAST_DUE') reasons.push('PAST_DUE');
+        if (t.subscriptionStatus === 'CANCELLED') reasons.push('CANCELLED');
+        if (t.plan === 'TRIAL' && t.subscriptionStatus === 'TRIAL') {
+          const ageDays = Math.floor((now - t.createdAt.getTime()) / DAY_MS);
+          if (ageDays >= TRIAL_LENGTH_DAYS) reasons.push('TRIAL_EXPIRED');
+          else if (ageDays >= TRIAL_LENGTH_DAYS - TRIAL_WARNING_DAYS) reasons.push('TRIAL_ENDING');
+        }
+        return { ...t, reasons };
+      })
+      .filter((t) => t.reasons.length > 0);
+
+    res.json({ data, total: data.length });
+  } catch (e) {
+    next(e);
+  }
+}
+
+
 export async function getPlatformTenant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const tenantId = String(req.params.tenantId ?? '');

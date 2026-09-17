@@ -6,27 +6,20 @@ import Card from '@/components/ui/card';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Alert from '@/components/ui/alert';
+import PlatformAttentionQueue from '@/components/platform/platform-attention-queue';
 import { usePlatformTenants } from '@/hooks/use-platform';
 
 /**
- * Phase 5 S2.4 — operator console: every workspace, its commercial state and
- * usage at a glance. Read-only: changes happen on the tenant detail page so
- * each one is audit-logged with intent.
+ * Phase 5 S2.4/S3.4 — operator console: every workspace, its commercial state
+ * and usage at a glance, with the server-derived attention queue on top.
+ * Read-only: changes happen on the tenant detail page so each one is
+ * audit-logged with intent.
  *
  * Manual billing: this screen replaces a billing dashboard — the operator
  * reconciles payments offline and records the outcome here.
  */
 
 const LIMIT = 20;
-
-/** A suspended or lapsed workspace is the operator's attention list. */
-function needsAttention(tenant: { isActive: boolean; subscriptionStatus: string }): boolean {
-  return (
-    !tenant.isActive ||
-    tenant.subscriptionStatus === 'PAST_DUE' ||
-    tenant.subscriptionStatus === 'CANCELLED'
-  );
-}
 
 export default function PlatformTenantsPage() {
   const [search, setSearch] = useState('');
@@ -41,7 +34,6 @@ export default function PlatformTenantsPage() {
 
   const tenants = data?.data ?? [];
   const pagination = data?.pagination;
-  const flagged = tenants.filter(needsAttention);
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,13 +81,7 @@ export default function PlatformTenantsPage() {
 
         {isError && <Alert tone="error">Could not load workspaces</Alert>}
 
-        {flagged.length > 0 && (
-          <Alert tone="warning" title="Needs attention">
-            {flagged.length} workspace{flagged.length === 1 ? '' : 's'} on this page{' '}
-            {flagged.length === 1 ? 'is' : 'are'} suspended or lapsed:{' '}
-            {flagged.map((t) => t.name).join(', ')}
-          </Alert>
-        )}
+        <PlatformAttentionQueue />
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">

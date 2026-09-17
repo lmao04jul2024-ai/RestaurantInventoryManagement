@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { platformService } from '@/services/platform.service';
 import type {
+  PlatformAttentionItem,
   PlatformListParams,
   PlatformTenantDetail,
   PlatformTenantUpdatePayload,
@@ -19,7 +20,20 @@ import type {
 export const PLATFORM_KEYS = {
   tenants: (params: PlatformListParams = {}) => ['platform-tenants', 'list', params] as const,
   tenant: (tenantId: string) => ['platform-tenants', 'detail', tenantId] as const,
+  attention: ['platform-tenants', 'attention'] as const,
 };
+
+/**
+ * S3.4 — the operator attention queue. Shares the `platform-tenants` key
+ * prefix so recording a commercial-state change refreshes the queue too.
+ */
+export function usePlatformAttention() {
+  return useQuery({
+    queryKey: PLATFORM_KEYS.attention,
+    queryFn: () => platformService.getAttention(),
+    staleTime: 30_000,
+  });
+}
 
 export function usePlatformTenants(params: PlatformListParams = {}) {
   return useQuery({

@@ -252,6 +252,40 @@ paths:
                   data: { type: array, items: { $ref: "#/components/schemas/PlatformTenantSummary" } }
                   pagination: { $ref: "#/components/schemas/Pagination" }
         "403": { description: FORBIDDEN_ROLE — caller is not a platform administrator }
+  /api/platform/attention:
+    get:
+      tags: [Platform]
+      summary: Operator attention queue — workspaces needing a manual billing decision (PLATFORM_ADMIN)
+      description: |
+        Phase 5 S3.4. Returns every workspace that currently needs human
+        action, each with machine-readable `reasons`:
+        `SUSPENDED` (isActive=false), `PAST_DUE`, `CANCELLED`,
+        `TRIAL_ENDING` (running TRIAL within 7 days of its 30-day window) or
+        `TRIAL_EXPIRED` (TRIAL past 30 days from createdAt). Manual billing:
+        each row is a prompt to contact the tenant and record the outcome via
+        PATCH /api/platform/tenants/{tenantId} (audit-logged).
+      responses:
+        "200":
+          description: Attention queue (newest signup first)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/PlatformTenantSummary"
+                        - type: object
+                          properties:
+                            reasons:
+                              type: array
+                              items:
+                                type: string
+                                enum: [SUSPENDED, PAST_DUE, CANCELLED, TRIAL_ENDING, TRIAL_EXPIRED]
+        "403": { description: FORBIDDEN_ROLE — caller is not a platform administrator }
   /api/platform/tenants/{tenantId}:
     get:
       tags: [Platform]

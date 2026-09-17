@@ -79,3 +79,19 @@ export interface PlatformListResult {
   data: PlatformTenantSummary[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
+
+/** One row of the S3.4 operator attention queue (GET /api/platform/attention). */
+export interface PlatformAttentionItem {
+  id: string;
+  name: string;
+  slug: string;
+  email: string | null;
+  plan: PlanTier;
+  subscriptionStatus: SubscriptionStatus;
+  seatsLimit: number;
+  isActive: boolean;
+  createdAt: string;
+  /** Machine-readable reason codes computed server-side. */
+  reasons: string[];
+  _count?: { users: number };
+}

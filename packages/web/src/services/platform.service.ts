@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import type {
+  PlatformAttentionItem,
   PlatformListParams,
   PlatformListResult,
   PlatformTenantDetail,
@@ -24,6 +25,14 @@ export const platformService = {
   async getTenant(tenantId: string): Promise<PlatformTenantDetail> {
     const { data } = await api.get<{ data: PlatformTenantDetail }>(`/platform/tenants/${tenantId}`);
     return data.data;
+  },
+
+  /** GET /api/platform/attention — the manual-billing action queue (S3.4). */
+  async getAttention(): Promise<{ data: PlatformAttentionItem[]; total: number }> {
+    const { data } = await api.get<{ data: PlatformAttentionItem[]; total: number }>(
+      '/platform/attention',
+    );
+    return data;
   },
 
   /** PATCH /api/platform/tenants/:id — operator-only commercial state. */
