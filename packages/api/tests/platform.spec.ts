@@ -209,8 +209,9 @@ describe('S2.2/S2.3 — platform tenant detail & audited updates', () => {
     expect(res.body.data.recentChanges).toEqual([]);
   });
 
-  it('a no-op PATCH persists and audits nothing', async () => {
+  it('a no-op PATCH keeps the detail shape so the console cache stays complete', async () => {
     findUniqueMock.mockResolvedValue(platformTenantRow);
+    (prisma.user.count as jest.Mock).mockResolvedValue(5);
     const res = await request(app)
       .patch(`/api/platform/tenants/${TENANT_ID}`)
       .set('Authorization', `Bearer ${platformToken}`)
@@ -218,6 +219,8 @@ describe('S2.2/S2.3 — platform tenant detail & audited updates', () => {
     expect(res.status).toBe(200);
     expect(prisma.tenant.update).not.toHaveBeenCalled();
     expect(auditCreate).not.toHaveBeenCalled();
+    expect(res.body.data.billing).toEqual({ seatsUsed: 5, seatsLimit: 10 });
+    expect(res.body.data.recentChanges).toEqual([]);
   });
 
   it('rejects lowering seatsLimit below current user count with 409 SEATS_BELOW_USAGE', async () => {

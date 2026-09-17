@@ -225,9 +225,22 @@ export async function updatePlatformTenant(req: AuthRequest, res: Response, next
     }
 
     // No-op patch: nothing CHANGED (a provided value equal to the current one
-    // is not a change) → persist nothing, audit nothing.
+    // is not a change) → persist nothing, audit nothing. The response keeps
+    // the GET detail shape so the console can swap it straight into its cache.
     if (Object.keys(changes).length === 0) {
-      return res.json({ data: tenant });
+      const history = await listAuditLogs({
+        tenantId,
+        action: 'platform:tenant.updated',
+        limit: HISTORY_LIMIT,
+      });
+      const seatsUsed = await prisma.user.count({ where: { tenantId } });
+      return res.json({
+        data: {
+          ...tenant,
+          billing: { seatsUsed, seatsLimit: tenant.seatsLimit },
+          recentChanges: history.data,
+        },
+      });
     }
 
     const updated = await prisma.tenant.update({
