@@ -109,3 +109,37 @@ for the app-level integration harness).
 3. Web shipped (build hash pinned), `ALLOWED_ORIGINS` updated.
 4. Feature flags flipped for each tenant before a new surface goes live.
 5. Smoke test one tenant end-to-end (menu → order → inventory → analytics).
+
+## 8. Go-live checklist — multi-tenant SaaS operations (S4.4)
+
+Beyond the rollout checklist above, selling to many businesses means the
+operator is now running a *service*. This section is the launch gate; do not
+sell a subscription until every box is checked.
+
+### Platform & data safety
+- [ ] S-Week 1 tenant-isolation audit green (`docs/security/TENANT_ISOLATION_AUDIT.md`) — no cross-tenant surface.
+- [ ] Nightly Postgres backups verified per `BACKUP.md`, restore drill performed on the production database.
+- [ ] `ENCRYPTION_KEY` unique + >= 16 chars; `GET /api/security/health` all-green in prod.
+- [ ] Rate-limit ceilings reviewed (`RATE_LIMIT_*`), `TRUST_PROXY=true` behind the edge.
+- [ ] `LOG_LEVEL=info` in prod; structured logs shipping to the aggregator (S4.2) and the paging hooks wired.
+
+### Commercial state (manual billing)
+- [ ] PLATFORM_ADMIN account created in prod (distinct from any tenant ADMIN; see S2.1).
+- [ ] Platform console reachable (e.g. `/platform/tenants`); a plan/status/seat change verified end-to-end **and** visible in the audit trail.
+- [ ] Attention queue (`GET /api/platform/attention`) reviewed daily during launch week.
+- [ ] Sales inbox (`NEXT_PUBLIC_SALES_EMAIL`) monitored; pricing page live at `/pricing`.
+- [ ] No payment processor anywhere in the codebase (Phase B invariant).
+
+### Tenant provisioning runbook (new customer)
+1. Customer signs up self-serve at `/onboarding` (creates the workspace + first ADMIN), or the operator provisions via a support session.
+2. Operator sets the commercial state on the platform console: `plan`, `subscriptionStatus`, `seatsLimit` (every change audit-logged as `platform:tenant.updated`).
+3. Operator verifies the workspace resolves on its tenant subdomain (S1.3 `TENANT_ROOT_DOMAIN`), the customer menu is reachable, and seat limits behave.
+4. Optional: guided data import via the onboarding CSV panel (S3.1).
+5. Confirm the customer received the verification/invite emails (S3.3) — or hand-configure SMTP (`SMTP_HOST`) before launch.
+
+### Offboarding & data-retention policy (churned customer)
+1. Operator records the outcome on the platform console: `subscriptionStatus=CANCELLED` (audit-logged), then `isActive=false` to suspend access (`WORKSPACE_INACTIVE` for members; non-members get 404 — no existence leak).
+2. Customers can self-serve export **before** offboarding: `GET /api/data-export` (S3.2) and `GET /api/me/data` (GDPR portability). Remind them in the cancellation notice.
+3. Data retention: keep the tenant's rows for the retention window agreed in the subscription (default: 90 days after cancellation) to allow win-backs, then hard-delete per the agreement. The `AuditLog` trail is insert-only (24-month retention) and survives workspace deletion for dispute resolution.
+4. GDPR erasure requests (`DELETE /api/me`) for individual customers remain available at any time, independent of the workspace's commercial state.
+5. After deletion, verify the tenant id no longer resolves (`TENANT_NOT_FOUND`) and subdomain is released.

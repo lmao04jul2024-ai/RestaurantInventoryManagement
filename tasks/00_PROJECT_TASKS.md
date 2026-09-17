@@ -239,10 +239,10 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 - [x] **S3.5** Tenant-facing usage + entitlement display polish (what plan includes vs what's consumed) *(plan-entitlements-card.tsx on /dashboard/tenants — per-tier copy (TRIAL/BASIC/PRO/ENTERPRISE) + consumption meters fed by /me/analytics; seats shown as the enforced S2.5 ceiling with LIMIT-reached badge; 1 web test)*
 
 ### S-Week 4: Launch Readiness (Phase E)
-- [ ] **S4.1** Single production deployment (existing Docker/compose → cloud host, managed Postgres, backups verified)
+- [ ] **S4.1** Single production deployment (existing Docker/compose → cloud host, managed Postgres, backups verified) *(USER-ACTION: needs cloud host credentials/choice — follow docs/deployment/README.md + the new §8 go-live checklist; all pre-reqs shipped: image builds, migrations, BACKUP.md drills, S4.2 logging)*
 - [x] **S4.2** Per-tenant log tagging + monitoring hooks (extends docs/deployment OPERATIONS runbooks) *(structured winston logger (JSON→stdout, LOG_LEVEL) — attachLogContext (X-Request-Id echo/generate) + requestLogger finish-hook resolving tenantId AFTER auth (context→JWT→X-Tenant-ID); errorHandler 5xx → tagged server_error records; OPERATIONS.md runbook section with per-tenant filtering + alert hooks; 5 tests in observability.spec.ts)*
 - [x] **S4.3** Marketing site: pricing page (manual-billing "contact to subscribe" CTA, no checkout), demo video, trial signup funnel to /onboarding *(public /pricing — 4 tier cards reusing plan semantics, Trial→/onboarding funnel, paid tiers → mailto NEXT_PUBLIC_SALES_EMAIL (default sales@yourapp.com), demo-video placeholder section, landing-page links; 2 tests; no payment processor anywhere per Phase B)*
-- [ ] **S4.4** Go-live checklist update in docs/deployment for multi-tenant operations (tenant provisioning runbook, offboarding/data-retention policy)
+- [x] **S4.4** Go-live checklist update in docs/deployment for multi-tenant operations (tenant provisioning runbook, offboarding/data-retention policy) *(docs/deployment/README.md §8 — platform/data-safety gate, manual-billing commercial checklist, 5-step provisioning runbook, 5-step offboarding + 90-day retention default, GDPR note; references S1/S2/S3 artifacts)*
 
 **Dependencies:** S-Week 1 is critical path (data-leak risk before selling). S-Week 2 depends on S1.1/S1.2 passing. S-Week 3/4 are parallelizable after S-Week 2.
 
