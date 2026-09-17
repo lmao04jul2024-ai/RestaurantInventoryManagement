@@ -161,4 +161,18 @@ describe('TenantsPage — Week 15.5/15.6 self-service settings', () => {
     expect(screen.getByText(/settle your account with your platform operator/i)).toBeInTheDocument();
     expect(screen.queryByLabelText('Workspace active')).not.toBeInTheDocument();
   });
+
+  it('shows what the current plan includes vs what has been consumed (S3.5)', async () => {
+    renderPage();
+
+    expect(await screen.findByTestId('plan-entitlements')).toBeInTheDocument();
+    expect(screen.getByText(/everything in basic/i)).toBeInTheDocument();
+    expect(screen.getByText('Usage analytics and reporting')).toBeInTheDocument();
+    // Consumption pairs with the analytics payload.
+    expect(screen.getByText('Menu items')).toBeInTheDocument();
+    expect(screen.getByText('Orders (total)')).toBeInTheDocument();
+    expect(screen.getAllByText('Customers').length).toBeGreaterThan(0);
+    // Seats are the hard-enforced ceiling (S2.5) — shown with the limit.
+    expect(screen.getByText('3 / 10')).toBeInTheDocument();
+  });
 });

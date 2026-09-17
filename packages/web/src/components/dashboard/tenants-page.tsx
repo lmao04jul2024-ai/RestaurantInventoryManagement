@@ -6,6 +6,7 @@ import Alert from '@/components/ui/alert';
 import Card from '@/components/ui/card';
 import Input from '@/components/ui/input';
 import { useTenant, useTenantAnalytics, useUpdateTenant } from '@/hooks/use-tenant';
+import PlanEntitlementsCard from '@/components/dashboard/plan-entitlements-card';
 import { getApiErrorMessage } from '@/lib/api';
 import type { OperatingHours, TenantProfile } from '@/types/tenant';
 
@@ -177,6 +178,16 @@ export default function TenantsPage() {
           />
         </div>
       </Card>
+
+      {/* S3.5 — what the plan includes vs what the workspace has consumed */}
+      <PlanEntitlementsCard
+        plan={billing?.plan ?? tenant.plan}
+        seatsUsed={billing?.seatsUsed ?? tenant._count?.users ?? 0}
+        seatsLimit={billing?.seatsLimit ?? tenant.seatsLimit}
+        menuItems={analytics?.menu.items}
+        orders={analytics?.orders.total}
+        customers={analytics?.customers.total}
+      />
 
       {/* 15.2/15.3 — profile & configuration editor */}
       <Card className="space-y-4">

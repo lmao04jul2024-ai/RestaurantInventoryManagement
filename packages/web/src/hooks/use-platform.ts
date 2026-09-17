@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { platformService } from '@/services/platform.service';
 import type {
-  PlatformAttentionItem,
   PlatformListParams,
   PlatformTenantDetail,
   PlatformTenantUpdatePayload,
