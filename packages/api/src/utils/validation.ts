@@ -1,12 +1,19 @@
 import Joi from 'joi';
 
+/** S4.5 — query string for `GET /api/internal/tls-ask` (edge TLS automation). */
+export const tlsAskQuerySchema = Joi.object({
+  domain: Joi.string().trim().min(1).max(253).required(),
+});
+
 export const registerSchema = Joi.object({
   email: Joi.string().email().max(255).required(),
   password: Joi.string()
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
   firstName: Joi.string().trim().min(1).max(100).required(),
   lastName: Joi.string().trim().min(1).max(100).required(),
@@ -36,7 +43,9 @@ export const resetPasswordSchema = Joi.object({
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
 });
 
@@ -51,7 +60,9 @@ export const changePasswordSchema = Joi.object({
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
 });
 
@@ -66,8 +77,13 @@ export function validateBody<T>(schema: Joi.ObjectSchema<T>, body: unknown): T {
   });
 
   if (error) {
-    const details = error.details.map((d) => ({ field: d.path.join('.'), message: d.message }));
-    const validationError = new Error(details.map((d) => `${d.field}: ${d.message}`).join('; '));
+    const details = error.details.map(d => ({
+      field: d.path.join('.'),
+      message: d.message,
+    }));
+    const validationError = new Error(
+      details.map(d => `${d.field}: ${d.message}`).join('; ')
+    );
     (validationError as any).statusCode = 400;
     (validationError as any).code = 'VALIDATION_ERROR';
     (validationError as any).details = details;
@@ -78,19 +94,27 @@ export function validateBody<T>(schema: Joi.ObjectSchema<T>, body: unknown): T {
 }
 
 /** Query-string variant of validateBody (same envelope semantics). */
-export function validateQuery<T>(schema: Joi.ObjectSchema<T>, query: unknown): T {
+export function validateQuery<T>(
+  schema: Joi.ObjectSchema<T>,
+  query: unknown
+): T {
   return validateBody(schema, query);
 }
 
 /** Route-parameter variant of validateBody. */
-export function validateParams<T>(schema: Joi.ObjectSchema<T>, params: unknown): T {
+export function validateParams<T>(
+  schema: Joi.ObjectSchema<T>,
+  params: unknown
+): T {
   return validateBody(schema, params);
 }
 
 // ── Menu domain schemas ────────────────────────────────────────────────────────
 
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
-const timeString = Joi.string().pattern(HH_MM).message('"{{#label}}" must be a 24h "HH:mm" time');
+const timeString = Joi.string()
+  .pattern(HH_MM)
+  .message('"{{#label}}" must be a 24h "HH:mm" time');
 const daysOfWeek = Joi.array()
   .items(Joi.number().integer().min(0).max(6))
   .max(7)
@@ -141,7 +165,7 @@ export const createMenuItemSchema = Joi.object({
 
 export const updateMenuItemSchema = createMenuItemSchema.fork(
   ['name', 'price', 'categoryId'],
-  (field) => field.optional(),
+  field => field.optional()
 );
 
 export const menuItemQuerySchema = Joi.object({
@@ -153,15 +177,25 @@ export const menuItemQuerySchema = Joi.object({
   glutenFree: Joi.boolean(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
-  sort: Joi.string().valid('name', 'price_asc', 'price_desc', 'newest').default('newest'),
+  sort: Joi.string()
+    .valid('name', 'price_asc', 'price_desc', 'newest')
+    .default('newest'),
 });
 
 export const pricingRuleSchema = Joi.object({
-  adjustmentType: Joi.string().valid('PERCENT_DISCOUNT', 'FIXED_PRICE').required(),
+  adjustmentType: Joi.string()
+    .valid('PERCENT_DISCOUNT', 'FIXED_PRICE')
+    .required(),
   amount: Joi.when('adjustmentType', [
     // Percent off must land in (0..100]; fixed prices are any positive amount.
-    { is: 'PERCENT_DISCOUNT', then: Joi.number().greater(0).max(100).required() },
-    { is: 'FIXED_PRICE', then: Joi.number().greater(0).max(1_000_000).required() },
+    {
+      is: 'PERCENT_DISCOUNT',
+      then: Joi.number().greater(0).max(100).required(),
+    },
+    {
+      is: 'FIXED_PRICE',
+      then: Joi.number().greater(0).max(1_000_000).required(),
+    },
   ]),
   name: Joi.string().trim().max(120),
   daysOfWeek: daysOfWeek.default([]),
@@ -173,7 +207,7 @@ export const pricingRuleSchema = Joi.object({
 
 export const updatePricingRuleSchema = pricingRuleSchema.fork(
   ['adjustmentType', 'amount'],
-  (field) => field.optional(),
+  field => field.optional()
 );
 
 export const availabilityWindowSchema = Joi.object({
@@ -230,7 +264,7 @@ export const createInventoryItemSchema = Joi.object({
 
 export const updateInventoryItemSchema = createInventoryItemSchema.fork(
   ['name', 'sku', 'minStock'],
-  (field) => field.optional(),
+  field => field.optional()
 );
 
 /**
@@ -248,7 +282,11 @@ export const inventoryImportRowSchema = Joi.object({
   currentStock: Joi.number().min(0).precision(3).default(0),
   minStock: Joi.number().min(0).precision(3).required(),
   maxStock: Joi.number().min(0).precision(3).allow(null),
-  unit: Joi.string().trim().uppercase().valid(...INVENTORY_UNITS).default('UNIT'),
+  unit: Joi.string()
+    .trim()
+    .uppercase()
+    .valid(...INVENTORY_UNITS)
+    .default('UNIT'),
   costPrice: Joi.number().min(0).precision(2).allow(null),
   sellingPrice: Joi.number().min(0).precision(2).allow(null),
   supplierName: Joi.string().trim().max(200).allow(null, ''),
@@ -269,7 +307,9 @@ export const inventoryItemQuerySchema = Joi.object({
   isActive: Joi.boolean(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
-  sort: Joi.string().valid('name', 'stock_asc', 'stock_desc', 'newest').default('newest'),
+  sort: Joi.string()
+    .valid('name', 'stock_asc', 'stock_desc', 'newest')
+    .default('newest'),
 });
 
 /** USAGE/RESTOCK/RETURN take a positive delta; ADJUSTMENT is a stock-take (absolute level ≥ 0). */
@@ -311,9 +351,8 @@ export const createSupplierSchema = Joi.object({
   isActive: Joi.boolean().default(true),
 });
 
-export const updateSupplierSchema = createSupplierSchema.fork(
-  ['name'],
-  (field) => field.optional(),
+export const updateSupplierSchema = createSupplierSchema.fork(['name'], field =>
+  field.optional()
 );
 
 export const supplierQuerySchema = Joi.object({
@@ -323,7 +362,13 @@ export const supplierQuerySchema = Joi.object({
 
 // ── Purchase-order schemas ────────────────────────────────────────────────────
 
-const PO_STATUSES = ['DRAFT', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'] as const;
+const PO_STATUSES = [
+  'DRAFT',
+  'SUBMITTED',
+  'PARTIALLY_RECEIVED',
+  'RECEIVED',
+  'CANCELLED',
+] as const;
 
 const poLineSchema = Joi.object({
   inventoryItemId: uuid.required(),
@@ -360,7 +405,7 @@ export const receivePurchaseOrderSchema = Joi.object({
         itemId: uuid.required(), // PurchaseOrderItem id
         quantity: Joi.number().greater(0).precision(3).required(),
         unitCost: Joi.number().min(0).precision(2).allow(null),
-      }),
+      })
     )
     .min(1)
     .max(100)
@@ -378,7 +423,14 @@ export const poIdParamSchema = Joi.object({ id: uuid.required() });
 
 // ── Order domain schemas (Week 9) ─────────────────────────────────────────────
 
-export const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const;
+export const ORDER_STATUSES = [
+  'PENDING',
+  'CONFIRMED',
+  'PREPARING',
+  'READY',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
 export const PAYMENT_METHODS = ['CASH', 'CARD', 'ONLINE'] as const;
 
 const orderLineSchema = Joi.object({
@@ -423,12 +475,18 @@ export const promoTypeValues = ['PERCENT', 'FIXED'] as const;
 
 export const promoCodeCreateSchema = Joi.object({
   code: Joi.string().trim().min(2).max(32).uppercase().required(),
-  type: Joi.string().valid(...promoTypeValues).required(),
-  value: Joi.number().positive().max(100).when('type', {
-    is: 'PERCENT',
-    then: Joi.number().positive().max(100),
-    otherwise: Joi.number().positive().max(1_000_000),
-  }).required(),
+  type: Joi.string()
+    .valid(...promoTypeValues)
+    .required(),
+  value: Joi.number()
+    .positive()
+    .max(100)
+    .when('type', {
+      is: 'PERCENT',
+      then: Joi.number().positive().max(100),
+      otherwise: Joi.number().positive().max(1_000_000),
+    })
+    .required(),
   minSubtotal: Joi.number().min(0).allow(null),
   maxRedemptions: Joi.number().integer().min(1).allow(null),
   startsAt: Joi.date().iso().allow(null),
@@ -463,7 +521,9 @@ const recurringItemSchema = Joi.object({
 /** 20.6 — subscription baskets. */
 export const recurringOrderCreateSchema = Joi.object({
   items: Joi.array().items(recurringItemSchema).min(1).max(20).required(),
-  recurrence: Joi.string().valid(...recurrenceValues).required(),
+  recurrence: Joi.string()
+    .valid(...recurrenceValues)
+    .required(),
   startAt: Joi.date().iso().optional(),
 });
 
@@ -491,7 +551,9 @@ export const orderQuerySchema = Joi.object({
 });
 
 export const orderStatusSchema = Joi.object({
-  status: Joi.string().valid(...ORDER_STATUSES).required(),
+  status: Joi.string()
+    .valid(...ORDER_STATUSES)
+    .required(),
 });
 
 /** Week 21.2 — staff assignment on orders (kitchen+). */
@@ -501,7 +563,9 @@ export const orderAssignSchema = Joi.object({
 
 /** Week 21.2 — optional live-status filter for the kitchen queue. */
 export const kitchenQueueQuerySchema = Joi.object({
-  status: Joi.string().valid(...ORDER_STATUSES).optional(),
+  status: Joi.string()
+    .valid(...ORDER_STATUSES)
+    .optional(),
 });
 
 /** Week 21.3 — prep-time analytics window (days looked back). */
@@ -524,7 +588,9 @@ export const orderItemStatusSchema = Joi.object({
 });
 
 export const payOrderSchema = Joi.object({
-  method: Joi.string().valid(...PAYMENT_METHODS).required(),
+  method: Joi.string()
+    .valid(...PAYMENT_METHODS)
+    .required(),
   amount: Joi.number().positive().precision(2),
   transactionId: Joi.string().trim().max(120).allow(null),
 });
@@ -572,7 +638,9 @@ const flagName = Joi.string()
   .min(2)
   .max(64)
   .pattern(/^[a-z0-9_]+$/)
-  .message('Flag name must be 2-64 characters using only lowercase letters, digits, and underscores');
+  .message(
+    'Flag name must be 2-64 characters using only lowercase letters, digits, and underscores'
+  );
 
 export const createFeatureFlagSchema = Joi.object({
   name: flagName.required(),
@@ -610,7 +678,9 @@ export const onboardingSchema = Joi.object({
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
   timezone: Joi.string().trim().max(64),
   currency: currencyCode,
@@ -630,15 +700,22 @@ const HEX_COLOR = Joi.string()
  * `logoUrl` is https-only to prevent mixed-content injection on the storefront.
  */
 export const tenantThemeSchema = Joi.object({
-  preset: Joi.string().valid('classic', 'emerald', 'sunset', 'custom').required(),
+  preset: Joi.string()
+    .valid('classic', 'emerald', 'sunset', 'custom')
+    .required(),
   mode: Joi.string().valid('light', 'dark', 'system').required(),
   custom: Joi.object({
     primary: HEX_COLOR.required(),
     secondary: HEX_COLOR.required(),
   }).allow(null),
   branding: Joi.object({
-    logoUrl: Joi.string().uri({ scheme: ['https'] }).max(500).allow(null),
-    fontFamily: Joi.string().valid('inter', 'georgia', 'trebuchet', 'mono').allow(null),
+    logoUrl: Joi.string()
+      .uri({ scheme: ['https'] })
+      .max(500)
+      .allow(null),
+    fontFamily: Joi.string()
+      .valid('inter', 'georgia', 'trebuchet', 'mono')
+      .allow(null),
   }).allow(null),
 }).allow(null);
 
@@ -655,7 +732,9 @@ export const updateTenantSchema = Joi.object({
   timezone: Joi.string().trim().max(64),
   currency: currencyCode,
   taxRate: Joi.number().min(0).max(100).precision(2),
-  operatingHours: Joi.object().pattern(Joi.string(), Joi.object().pattern(Joi.string(), Joi.string())).allow(null),
+  operatingHours: Joi.object()
+    .pattern(Joi.string(), Joi.object().pattern(Joi.string(), Joi.string()))
+    .allow(null),
   // Week 17.2/17.5 — tenant-wide theme & branding document.
   theme: tenantThemeSchema,
 }).min(1);
@@ -669,7 +748,12 @@ export const tenantAnalyticsQuerySchema = Joi.object({
 /** Operator-only commercial state changes; every write is audit-logged. */
 export const platformTenantUpdateSchema = Joi.object({
   plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'),
-  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED'),
+  subscriptionStatus: Joi.string().valid(
+    'TRIAL',
+    'ACTIVE',
+    'PAST_DUE',
+    'CANCELLED'
+  ),
   seatsLimit: Joi.number().integer().min(1).max(10_000),
   isActive: Joi.boolean(),
 }).min(1);
@@ -684,10 +768,16 @@ export const platformTenantCreateSchema = Joi.object({
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
-  plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE').default('TRIAL'),
-  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED').default('TRIAL'),
+  plan: Joi.string()
+    .valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE')
+    .default('TRIAL'),
+  subscriptionStatus: Joi.string()
+    .valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED')
+    .default('TRIAL'),
   seatsLimit: Joi.number().integer().min(1).max(10_000).default(10),
   timezone: Joi.string().trim().max(64),
   currency: currencyCode,
@@ -707,7 +797,7 @@ export const platformListQuerySchema = Joi.object({
 export const permissionOverridesSchema = Joi.object()
   .pattern(
     Joi.string().trim().min(1),
-    Joi.alternatives(Joi.boolean(), Joi.valid(null)),
+    Joi.alternatives(Joi.boolean(), Joi.valid(null))
   )
   .max(50);
 
@@ -718,11 +808,17 @@ export const createStaffSchema = Joi.object({
     .min(8)
     .max(128)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .message(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    )
     .required(),
   firstName: Joi.string().trim().min(1).max(100).required(),
   lastName: Joi.string().trim().min(1).max(100).required(),
-  role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER').required(),
+  role: Joi.string()
+    .trim()
+    .uppercase()
+    .valid('MANAGER', 'KITCHEN', 'SERVER')
+    .required(),
 });
 
 /** Week 16.5 — profile edit + role change payload. */
@@ -746,7 +842,10 @@ export const auditLogQuerySchema = Joi.object({
 export const staffListQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(50),
-  role: Joi.string().trim().uppercase().valid('MANAGER', 'KITCHEN', 'SERVER', 'CUSTOMER'),
+  role: Joi.string()
+    .trim()
+    .uppercase()
+    .valid('MANAGER', 'KITCHEN', 'SERVER', 'CUSTOMER'),
   q: Joi.string().trim().max(100),
 });
 

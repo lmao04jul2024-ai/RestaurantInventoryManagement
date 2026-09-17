@@ -1,7 +1,7 @@
 # API Reference Guide (Week 23.1)
 
 The complete REST surface of `@restaurant/api` is machine-described in
-[`openapi.yaml`](./openapi.yaml) (OpenAPI 3.0.3, 66 paths / 26 schemas). This
+[`openapi.yaml`](./openapi.yaml) (OpenAPI 3.0.3, 71 paths / 30 schemas). This
 guide is the human-readable companion: how to authenticate, how every domain
 fits together, and what every error code means.
 
@@ -153,6 +153,17 @@ Week 22's limiter is applied per IP with stricter buckets on auth routes
 (Phase 5 S1.4 adds a per-tenant fairness ceiling keyed on the verified JWT
 tenant — one busy workspace cannot starve the others). On breach the API
 returns `429 RATE_LIMITED` with `Retry-After`.
+
+## Internal / proxy endpoints
+
+These are **not** user features. They exist for the reverse proxy (Caddy) and the
+release tooling, and have no JWT/auth surface of their own. The public edge
+answers 404/NOT FOUND for them, so in production they are reachable only from
+inside the compose network (see `deploy/Caddyfile`).
+
+| Endpoint | Called by | Purpose |
+| --- | --- | --- |
+| `GET /api/internal/tls-ask?domain=<host>` | Caddy on-demand TLS | Before issuing a certificate for a host, Caddy asks whether we serve it. 2xx = issue; 403 = refuse. Allows apex/`www`/`api` and `{slug}`/`api.{slug}` hosts of **active** workspaces (mirrors `extractSubdomain` so the edge never certifies a host the API won't resolve); fails closed, so a DB outage means "no new certs". Offboarding an inactive workspace auto-reclaims its cert (§8). |
 
 ## Keeping this in sync
 

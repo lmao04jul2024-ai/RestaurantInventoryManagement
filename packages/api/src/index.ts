@@ -26,14 +26,21 @@ import gdprRoutes from './routes/gdpr.routes';
 import securityRoutes from './routes/security.routes';
 import platformRoutes from './routes/platform.routes';
 import dataExportRoutes from './routes/data-export.routes';
-import { authRateLimit, globalRateLimit, tenantRateLimit } from './middleware/rate-limit';
+import internalRoutes from './routes/internal.routes';
+import {
+  authRateLimit,
+  globalRateLimit,
+  tenantRateLimit,
+} from './middleware/rate-limit';
 import { attachLogContext, requestLogger } from './services/logger';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:3000'];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') ?? [
+  'http://localhost:3000',
+];
 
 // Week 22.2 — behind a TLS-terminating proxy/CDN, trust the first hop so
 // `req.ip` reflects the real client (required for meaningful rate limiting).
@@ -83,6 +90,10 @@ app.get('/', (_req, res) => {
 });
 
 // API routes
+// S4.5 — reverse-proxy automation (Caddy on-demand TLS). No auth by design, and
+// the edge 404s the path so it is only reachable from inside the compose
+// network (deploy/Caddyfile).
+app.use('/api/internal', internalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/inventory', inventoryRoutes);

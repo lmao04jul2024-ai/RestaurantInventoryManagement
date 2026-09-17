@@ -1,0 +1,198 @@
+# Production stack — see docs/deployment/README.md §9.
+#
+# How this differs from docker-compose.yml (dev):
+#   * every secret comes from the environment (--env-file .env.production) and
+#     uses `${VAR:?message}` so a missing value ABORTS the command instead of
+#     silently booting with a dev default,
+#   * Postgres / Redis / api / web publish NO host ports — the only ingress is
+#     `caddy` on 80/443, and everything else is reachable only on the internal
+#     compose network,
+#   * `NEXT_PUBLIC_API_URL` is a BUILD arg: Next.js inlines it into the browser
+#     bundle at build time, so a runtime `environment:` value would be ignored.
+#
+# Boot sequence (full runbook: docs/deployment/README.md §9):
+#   cp .env.production.example .env.production && chmod 600 .env.production
+#   docker compose --env-file .env.production -f docker-compose.prod.yml build
+#   docker compose --env-file .env.production -f docker-compose.prod.yml --profile tools run --rm migrate
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+
+name: restaurant-prod
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Persistence on: caching is lazy today, but rate-limit/session state must
+    # not vanish on a container restart.
+    command: ['redis-server', '--save', '60', '1', '--appendonly', 'yes']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    build:
+      context: .
+      target: api-production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      # Built from the parts so the password is written in exactly one place.
+      # Keep it URL-safe (avoid @ : / # ?) or percent-encode it.
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      REDIS_URL: redis://redis:6379
+      # Secrets — generate with: openssl rand -hex 32
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (>= 16 chars)}
+      # Multi-tenancy (S1.3) — also gates the Caddy on-demand TLS ask endpoint.
+      TENANT_ROOT_DOMAIN: ${TENANT_ROOT_DOMAIN:?TENANT_ROOT_DOMAIN is required}
+      # CORS allow-list for the public web origin(s), comma-separated.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
+      # Human-facing origin used in lifecycle emails (verify / reset / invite).
+      APP_URL: ${PUBLIC_WEB_URL:?PUBLIC_WEB_URL is required}
+      # Required behind the Caddy edge: without it every request looks like it
+      # came from the proxy, collapsing the rate limiters into one bucket.
+      TRUST_PROXY: 'true'
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-10}
+      RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-300}
+      RATE_LIMIT_TENANT_MAX: ${RATE_LIMIT_TENANT_MAX:-3000}
+      # Notification email. Confirm the host allows outbound 587/465 first —
+      # see docs/deployment/OPERATIONS.md.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      QAPPR_API_URL: ${QAPPR_API_URL:-}
+      QAPPR_API_KEY: ${QAPPR_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: .
+      target: web-production
+      args:
+        # Inlined into the CLIENT bundle at build time — see the Dockerfile.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+        # Keep the code's own default: an empty string would win over `??` in
+        # packages/web/src/app/pricing/page.tsx.
+        NEXT_PUBLIC_SALES_EMAIL: ${SALES_EMAIL:-sales@yourapp.com}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/ || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  # Sole ingress. Terminates TLS for the apex, the api host and every tenant
+  # subdomain (on-demand certificates), then routes api.* → api:3001 and
+  # everything else → web:3000.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      TENANT_ROOT_DOMAIN: ${TENANT_ROOT_DOMAIN:?TENANT_ROOT_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  # One-shot schema migration. Deliberately NOT wired into the api container's
+  # boot: the runbook migrates BEFORE rolling the new image so a rollback stays
+  # clean (docs/deployment/README.md §3).
+  migrate:
+    profiles: ['tools']
+    build:
+      context: .
+      target: api-production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+    command: ['npm', 'run', 'prisma:migrate:deploy', '--workspace=@restaurant/api']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  # One-shot platform bootstrap (idempotent upsert of the platform tenant +
+  # PLATFORM_ADMIN). Run once after the first migration.
+  seed:
+    profiles: ['tools']
+    build:
+      context: .
+      target: api-production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:?PLATFORM_ADMIN_EMAIL is required}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD is required}
+    command: ['npm', 'run', 'prisma:seed', '--workspace=@restaurant/api']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

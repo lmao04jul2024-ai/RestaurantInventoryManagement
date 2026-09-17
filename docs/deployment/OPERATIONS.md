@@ -100,6 +100,25 @@ Level is controlled by `LOG_LEVEL` (default `info`; `debug` in development).
 - The security-event stream (`docs/security/AUDIT.md`, `writeSecurityEvent`)
   remains the auth/abuse signal — feed both streams to the same pipeline.
 
+## TLS certificates
+
+Certificates for the apex and every `{tenant}` / `api.{tenant}` subdomain are
+issued **on demand** by Caddy (see `deploy/Caddyfile` and docs/deployment/README.md §9.4):
+the first request for a host triggers an HTTP-01 challenge gated by
+`GET /api/internal/tls-ask`.
+
+Runbook:
+
+- A new tenant's first visit to its subdomain triggers an issuance — no operator
+  step. Watch the Caddy log (`tls.*` entries) for the first few onboards.
+- If a tenant reports "your connection is not private", confirm: wildcard DNS
+  (`*.yourapp.com` → server IP) exists, port 80 is reachable from the internet,
+  and `GET /api/internal/tls-ask?domain=<tenant>.yourapp.com` returns 200 (if 403,
+  the workspace is missing or inactive).
+- Renewal is automatic; `GET /health` is the liveness signal Caddy probes.
+- After offboarding an inactive workspace its certificate ages out — no manual
+  revoke is needed because the ask now returns 403 for that host.
+
 ## Weekly ops checklist
 - [ ] `/health` monitored + paging path tested
 - [ ] Nightly backups present (Mon–Sun) and one checksum spot-verified

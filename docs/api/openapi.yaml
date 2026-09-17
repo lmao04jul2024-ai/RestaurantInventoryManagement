@@ -32,6 +32,7 @@ tags:
   - name: Staff
   - name: Audit
   - name: System
+  - name: Internal
 
 security:
   - bearerAuth: []
@@ -563,7 +564,6 @@ paths:
           schema: { type: string, format: date }
       responses:
         "200": { description: Consumption rows }
-        "200": { description: Effective price + applied rules }
   /api/menus/items/{id}:
     get:
       tags: [Menus]
@@ -687,6 +687,15 @@ paths:
       summary: Update a draft purchase order
       parameters:
         - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200": { description: Updated purchase order }
+    delete:
+      tags: [Purchase Orders]
+      summary: Delete a draft purchase order
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204": { description: Deleted }
 # ── Orders ───────────────────────────────────────────────────────────────
   /api/orders:
     get:
@@ -948,15 +957,6 @@ paths:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "204": { description: Deleted }
-      responses:
-        "200": { description: Updated purchase order }
-    delete:
-      tags: [Purchase Orders]
-      summary: Delete a draft purchase order
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      responses:
-        "204": { description: Deleted }
   /api/purchase-orders/{id}/submit:
     post:
       tags: [Purchase Orders]
@@ -1201,6 +1201,47 @@ paths:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "204": { description: Deleted }
+  /api/internal/tls-ask:
+    get:
+      tags: [Internal]
+      summary: Edge gate for on-demand TLS issuance (reverse proxy only)
+      description: |
+        Called by Caddy's `on_demand_tls` hook before it issues a certificate
+        for a host: any 2xx allows issuance, 403 refuses it. Unauthenticated by
+        necessity (the proxy holds no JWT) and deliberately NOT reachable from
+        the internet — the shipped `deploy/Caddyfile` answers 404 for this path,
+        so only the proxy's in-network call reaches it. See
+        docs/deployment/README.md §9.4.
+      security: []
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema: { type: string, maxLength: 253 }
+          description: Host Caddy wants a certificate for, e.g. `acme.restaurant.example.com`.
+      responses:
+        "200":
+          description: Host is served by this deployment — issuance allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      domain: { type: string }
+                      allowed: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403":
+          description: >-
+            Host not served: unknown or inactive workspace, foreign domain, or
+            TENANT_ROOT_DOMAIN unset (fails closed).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+
 
 components:
   securitySchemes:

@@ -87,12 +87,15 @@ for the app-level integration harness).
 ## 6. Production notes
 
 - **API**: `npm run build --workspace @restaurant/api` then
-  `node packages/api/dist/index.js`. `Dockerfile` (api-production stage) runs
-  `prisma generate` + `prisma migrate deploy` before boot — do NOT strip
-  devDependencies before `prisma generate` runs (the CLI must be present).
+  `node packages/api/dist/index.js`. `Dockerfile` (api-production stage) keeps
+  the dev dependencies on purpose so the `prisma` CLI is present for the
+  migration step — do NOT strip devDependencies. The image does **not** run
+  `migrate deploy` at boot; migrations are applied explicitly before a rollout
+  (`docker compose … run --rm migrate`, see §9).
 - **Web**: `npm run build --workspace @restaurant/web`, then
-  `next start` (port 3000). Terminate TLS at the edge (nginx/Caddy) and set
-  `ALLOWED_ORIGINS` to the public origin.
+  `next start` (port 3000). Terminate TLS at the edge (nginx/Caddy; the shipped
+  config is `deploy/Caddyfile`, §9) and set `ALLOWED_ORIGINS` to the public
+  origin. Remember `NEXT_PUBLIC_API_URL` is a **build** argument — see §9.2.
 - **Multi-tenant ops**: no tenant-scoped code may bypass
   `resolveTenant`; new endpoints must mount `authenticate` + `resolveTenant`
   and rely on the tenant-scope Prisma guard for where-bearing queries.
@@ -142,4 +145,102 @@ sell a subscription until every box is checked.
 2. Customers can self-serve export **before** offboarding: `GET /api/data-export` (S3.2) and `GET /api/me/data` (GDPR portability). Remind them in the cancellation notice.
 3. Data retention: keep the tenant's rows for the retention window agreed in the subscription (default: 90 days after cancellation) to allow win-backs, then hard-delete per the agreement. The `AuditLog` trail is insert-only (24-month retention) and survives workspace deletion for dispute resolution.
 4. GDPR erasure requests (`DELETE /api/me`) for individual customers remain available at any time, independent of the workspace's commercial state.
+## 9. Single-host production stack (`docker-compose.prod.yml` + `deploy/Caddyfile`)
+
+The supported shape for one VPS: four containers (`postgres`, `redis`, `api`,
+`web`) plus a Caddy edge, with **only 80/443 published**. Everything else is
+reachable exclusively on the internal compose network.
+
+```
+Internet ──► caddy :80/:443 ──► api.*  → api:3001 ──► postgres / redis
+                              └► apex, www, {tenant}.* → web:3000
+```
+
+### 9.1 First deploy
+
+```bash
+# 0. DNS first — both records must exist before Caddy asks for a certificate:
+#    A  restaurant.example.com      -> <server ip>
+#    A  *.restaurant.example.com    -> <server ip>   (tenant + api subdomains)
+
+cp .env.production.example .env.production
+chmod 600 .env.production          # fill in every required value first
+
+export COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
+
+$COMPOSE build                              # web is built with PUBLIC_API_URL baked in
+$COMPOSE --profile tools run --rm migrate   # schema first…
+$COMPOSE --profile tools run --rm seed      # …then the platform operator account
+$COMPOSE up -d
+$COMPOSE ps                                # every service should be (healthy)
+```
+
+Then verify from outside the host:
+
+```bash
+curl -sS https://api.restaurant.example.com/health          # {"status":"ok",…}
+curl -sSI https://restaurant.example.com | head -1          # HTTP/2 200
+curl -sS "https://api.restaurant.example.com/api/internal/tls-ask?domain=acme.restaurant.example.com"
+# → 404: the ACME hook is deliberately not an internet-facing surface
+```
+
+### 9.2 `NEXT_PUBLIC_API_URL` is a BUILD argument
+
+Next.js inlines `NEXT_PUBLIC_*` into the **browser** bundle at `next build
+(see the `web-builder` stage in `Dockerfile`). A runtime `environment:` value is
+ignored, and the code's fallback (`http://localhost:3001`) ships instead — so
+every visitor's browser would call its own machine.
+
+Consequences:
+
+- the value must be the **public** API origin (`https://api.<root>`), not a
+  container name;
+- changing the origin requires `docker compose … build web && up -d web`, not a
+  restart;
+- `ALLOWED_ORIGINS` on the API must list the public **web** origin(s), or the
+  browser will block the responses CORS.
+
+`NEXT_PUBLIC_SALES_EMAIL` is baked the same way, but lands in the **server**
+bundle (`/pricing` is a server component) — still build-time, so still needs a
+rebuild to change.
+
+### 9.3 Sealing secrets (why this file exists)
+
+`docker-compose.yml` is a **development** file: it hardcodes
+`restaurant123` / `your-secret-key-change-in-production` and publishes
+5433/6379/3000/3001 on every interface. Never run it on a public host — a
+leaked `JWT_SECRET` lets anyone mint a token for any `tenantId`, which is
+exactly the boundary `docs/security/TENANT_ISOLATION_AUDIT.md` certifies.
+
+The prod file instead:
+
+- takes every secret from `.env.production` via `${VAR:?message}`, so a missing
+  value **aborts** the command instead of booting with a dev default;
+- publishes nothing but 80/443;
+- runs each container with `restart: unless-stopped` + `no-new-privileges`;
+- healthchecks every service (`/health` for the API, `/` for web), which is
+  what makes `depends_on: service_healthy` meaningful.
+
+Also set `TRUST_PROXY=true` (already in the file): behind the edge `req.ip` is
+otherwise the proxy's address and the rate limiters collapse into a single
+bucket.
+
+### 9.4 The Caddy edge and tenant certificates
+
+`deploy/Caddyfile` serves the apex and `*.<root>` from one site block
+(`api.*` → API, everything else → web) and issues certificates **on demand**:
+the first request for `acme.restaurant.example.com` triggers an HTTP-01
+issuance, cached in the `caddy_data` volume after that. No per-tenant operator
+work when a restaurant is onboarded.
+
+On-demand issuance is gated by `GET /api/internal/tls-ask?domain=<host>`
+(`packages/api/src/controllers/internal.controller.ts`), which allows only the
+apex, `www`, `api`, and `{slug}`/`api.{slug}` hosts whose workspace exists **and
+is active**. It fails closed, so a database outage means "no new certificates"
+rather than "any host may get one". Offboarding therefore releases the
+certificate automatically (see §8, step 5).
+
+> The endpoint is unauthenticated by necessity (Caddy presents no JWT) and the
+> public edge answers **404** for its path — the routing rule exists purely so
+> the API's own URL space has no anonymous exception reachable from outside.
 5. After deletion, verify the tenant id no longer resolves (`TENANT_NOT_FOUND`) and subdomain is released.

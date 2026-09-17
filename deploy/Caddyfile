@@ -1,0 +1,55 @@
+# Production edge — see docs/deployment/README.md §9.
+#
+# ONE site block covers the apex plus every tenant subdomain, because Caddy
+# rejects a config where an explicit host (api.yourapp.com) is also matched by
+# a wildcard site in a different block ("ambiguous site definition"). Routing
+# is therefore done with `handle` blocks, which are mutually exclusive and
+# evaluated top-to-bottom.
+#
+# Certificates: on-demand. Caddy issues one when a host is first requested, and
+# asks the API first so a domain merely pointing at this IP cannot make us burn
+# ACME quota. Requires wildcard DNS (*.yourapp.com → this host) because
+# issuance uses the HTTP-01 challenge on port 80.
+{
+	email {$ACME_EMAIL}
+
+	on_demand_tls {
+		# Caddy calls the API directly over the compose network — this URL is
+		# NOT the public one, and the public edge answers 404 for the path.
+		# (Caddy 2.10 removed the `interval` / `burst` knobs: the ask endpoint
+		# is the control, and issuance is cached per host once obtained.)
+		ask http://api:3001/api/internal/tls-ask
+	}
+}
+
+https://{$TENANT_ROOT_DOMAIN}, https://*.{$TENANT_ROOT_DOMAIN} {
+	tls {
+		on_demand
+	}
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	# ACME hook for Caddy's internal call only — never a public surface.
+	handle /api/internal/tls-ask {
+		respond 404
+	}
+
+	# api.yourapp.com and api.{tenant}.yourapp.com both serve the API (the
+	# middleware treats `api.{tenant}.root` as the tenant's own API host).
+	@api host api.{$TENANT_ROOT_DOMAIN} api.*.{$TENANT_ROOT_DOMAIN}
+	handle @api {
+		reverse_proxy api:3001
+	}
+
+	# Apex, www and every tenant subdomain serve the Next.js app. Caddy
+	# forwards the client's X-Request-Id untouched, so web → api traces
+	# correlate (docs/deployment/OPERATIONS.md §S4.2).
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -20,6 +20,14 @@ RUN npm run build --workspace=@restaurant/api
 FROM shared-builder AS web-builder
 ENV NEXT_IGNORE_INCORRECT_LOCKFILE=1
 ENV NEXT_TELEMETRY_DISABLED=1
+# `NEXT_PUBLIC_*` values are INLINED into the client bundle at build time — they
+# are read by the browser, so a runtime `environment:` value in compose has no
+# effect (packages/web/src/lib/api.ts, src/app/pricing/page.tsx). Pass them as
+# build args; rebuild whenever the public origin changes.
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SALES_EMAIL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SALES_EMAIL=$NEXT_PUBLIC_SALES_EMAIL
 COPY packages/web ./packages/web
 RUN npm run build --workspace=@restaurant/web
 
