@@ -1,4 +1,42 @@
-# Session 2026-09-17 — Refresh local Docker stack and restore platform login
+# Session 2026-09-17 (b) — Self-service password change (platform operator) + console column rationale
+
+## Report
+- "fix password change for /platform platform admin": there was **no** in-app password change anywhere —
+  live check (headless Chrome, platform@yourapp.com) shows the avatar menu contains only *Sign out*;
+  the only documented path was the email reset flow. Grep confirmed zero change-password UI and no
+  authenticated `PATCH .../password` endpoint. Fix = build the missing capability.
+- "why seats and usage column in this UI table?": answered (S2.4 manual-billing console rationale) — no code change.
+
+## Plan
+- [x] API: `changePasswordSchema` (validation.ts) + `changePassword` controller (auth.controller.ts)
+- [x] API: `PATCH /api/auth/password` via `authenticate` only (no resolveTenant → PLATFORM_ADMIN is legal here)
+- [x] API: revoke every session on success + fail-open `security:auth.password_changed` audit row
+- [x] API tests: `packages/api/tests/auth-password.spec.ts` (operator path, wrong current, reuse, inactive, weak, audit)
+- [x] Web: `ChangePasswordPayload` type + `authService.changePassword`
+- [x] Web: `components/auth/change-password-dialog.tsx` (current + new + confirm, success → sign out)
+- [x] Web: UserMenu gains "Change password" (lands in the platform console shell AND the dashboard shell)
+- [x] Web tests: dialog spec + user-menu spec (shared `mocks/auth-service.ts` gains `mockChangePassword`)
+- [x] Docs: `docs/api/README.md` + `docs/api/openapi.yaml`
+- [x] Verify: api + web suites, tsc, live curl round-trip on the Docker stack
+
+## Review (2026-09-17)
+- Root cause: the capability was MISSING, not broken. Live headless-Chrome check of /platform/tenants as
+  platform@yourapp.com showed the avatar menu offering only "Sign out"; no change-password UI and no
+  authenticated password endpoint existed anywhere (only the email reset flow).
+- API: `PATCH /api/auth/password` → 200 (rotates, revokes all sessions, audit row), 400
+  CURRENT_PASSWORD_INCORRECT, 400 PASSWORD_UNCHANGED, 400 VALIDATION_ERROR (weak), 401 unauthenticated /
+  USER_INACTIVE. Route is authenticate-only so the operator role (rejected by resolveTenant on tenant
+  surfaces) can use it; handler scopes by `req.user.userId`.
+- Web: avatar menu (shared by /platform console and /dashboard) → "Change password" → modal dialog;
+  success revokes the session client-side too and routes to /login.
+- Live verification on the rebuilt Docker stack: curl round-trip rotated the operator password, logged in
+  with the new one, rejected the old one, then RESTORED the seeded password (final login 200 as
+  PLATFORM_ADMIN). Headless Chrome: menu shows "Change password" + "Sign out", the dialog opens with all
+  three fields, and submitting a wrong current password renders "Your current password is incorrect."
+  (no mutation) — i.e. the whole web→api path is exercised.
+- Suites: api 30 suites / 447 tests green (+8 new), web 35 suites / 186 tests green (+7 new); api + web tsc
+  clean; eslint 0 errors (7 pre-existing `any` warnings only); openapi.yaml parses (70 paths).
+- Untouched working-tree noise (other session): untracked `packages/api/prisma/migrations/*` — left alone.
 
 - [x] Inspect running images, schema drift, seed behavior, and build setup.
 - [x] Add the missing PLATFORM_ADMIN migration (no database reset).
