@@ -3,6 +3,8 @@ import type {
   PlatformAttentionItem,
   PlatformListParams,
   PlatformListResult,
+  PlatformTenantCreatePayload,
+  PlatformTenantCreateResponse,
   PlatformTenantDetail,
   PlatformTenantUpdatePayload,
 } from '@/types/platform';
@@ -32,6 +34,12 @@ export const platformService = {
     const { data } = await api.get<{ data: PlatformAttentionItem[]; total: number }>(
       '/platform/attention',
     );
+    return data;
+  },
+
+  /** POST /api/platform/tenants — operator provisions workspace + first ADMIN. */
+  async createTenant(payload: PlatformTenantCreatePayload): Promise<PlatformTenantCreateResponse> {
+    const { data } = await api.post<PlatformTenantCreateResponse>('/platform/tenants', payload);
     return data;
   },
 

@@ -1,8 +1,15 @@
+jest.mock('next/navigation', () => ({
+  __esModule: true,
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => '/platform/tenants',
+  useSearchParams: () => ({ get: () => null }),
+}));
 jest.mock('@/services/platform.service', () => ({
   platformService: {
     listTenants: jest.fn(),
     getTenant: jest.fn(),
     updateTenant: jest.fn(),
+    createTenant: jest.fn(),
     getAttention: jest.fn(),
   },
 }));
@@ -145,5 +152,23 @@ describe('PlatformTenantsPage — S2.4 operator console', () => {
     renderPage();
 
     expect(await screen.findByText('Could not load workspaces')).toBeInTheDocument();
+  });
+
+  it('opens the provisioning dialog from the New workspace button (S5)', async () => {
+    renderPage();
+    await screen.findByRole('link', { name: 'The Bloom Bistro' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'New workspace' }));
+
+    // The dialog mounts outside the list card — restaurant + first ADMIN fields.
+    expect(await screen.findByRole('dialog', { name: 'Provision a new workspace' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Restaurant name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Admin email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Temporary admin password')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Provision a new workspace' })).not.toBeInTheDocument(),
+    );
   });
 });

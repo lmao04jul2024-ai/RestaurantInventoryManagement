@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { platformService } from '@/services/platform.service';
 import type {
   PlatformListParams,
+  PlatformTenantCreatePayload,
+  PlatformTenantCreateResponse,
   PlatformTenantDetail,
   PlatformTenantUpdatePayload,
 } from '@/types/platform';
@@ -48,6 +50,22 @@ export function usePlatformTenant(tenantId: string) {
     queryFn: () => platformService.getTenant(tenantId),
     enabled: tenantId.length > 0,
     staleTime: 15_000,
+  });
+}
+
+/**
+ * S5 — operator provisions a workspace + first ADMIN in one audited call.
+ * On success the new workspace appears in the list and the detail page is
+ * pre-warmed from the POST response (which already carries billing).
+ */
+export function useCreatePlatformTenant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: PlatformTenantCreatePayload) => platformService.createTenant(payload),
+    onSuccess: (created: PlatformTenantCreateResponse) => {
+      qc.setQueryData(PLATFORM_KEYS.tenant(created.data.id), created.data);
+      qc.invalidateQueries({ queryKey: ['platform-tenants'] });
+    },
   });
 }
 

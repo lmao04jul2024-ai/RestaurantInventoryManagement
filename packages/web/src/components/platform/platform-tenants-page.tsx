@@ -7,13 +7,16 @@ import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Alert from '@/components/ui/alert';
 import PlatformAttentionQueue from '@/components/platform/platform-attention-queue';
+import { PlatformCreateTenantDialog } from '@/components/platform/platform-create-tenant-dialog';
 import { usePlatformTenants } from '@/hooks/use-platform';
 
 /**
  * Phase 5 S2.4/S3.4 — operator console: every workspace, its commercial state
  * and usage at a glance, with the server-derived attention queue on top.
- * Read-only: changes happen on the tenant detail page so each one is
- * audit-logged with intent.
+ *
+ * S5 — the "New workspace" button provisions a workspace + first ADMIN in one
+ * audited call (POST /api/platform/tenants) via the dialog below. Detail-page
+ * edits remain where commercial-state changes are recorded with intent.
  *
  * Manual billing: this screen replaces a billing dashboard — the operator
  * reconciles payments offline and records the outcome here.
@@ -25,6 +28,7 @@ export default function PlatformTenantsPage() {
   const [search, setSearch] = useState('');
   const [applied, setApplied] = useState('');
   const [page, setPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { data, isLoading, isError } = usePlatformTenants({
     page,
@@ -43,12 +47,17 @@ export default function PlatformTenantsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Workspaces</h1>
-        <p className="mt-1 text-sm text-content-muted">
-          Every restaurant on the platform. Plans, status and seat limits are managed here and
-          audited.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Workspaces</h1>
+          <p className="mt-1 text-sm text-content-muted">
+            Every restaurant on the platform. Plans, status and seat limits are managed here and
+            audited.
+          </p>
+        </div>
+        <Button type="button" onClick={() => setCreateOpen(true)}>
+          New workspace
+        </Button>
       </div>
 
       <Card className="space-y-4">
@@ -194,6 +203,8 @@ export default function PlatformTenantsPage() {
           </div>
         )}
       </Card>
+
+      {createOpen && <PlatformCreateTenantDialog onClose={() => setCreateOpen(false)} />}
     </div>
   );
 }

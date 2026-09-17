@@ -61,6 +61,26 @@ export interface PlatformTenantDetail extends PlatformTenantSummary {
   };
 }
 
+/** Operator provisions a workspace + first ADMIN (POST /api/platform/tenants). */
+export interface PlatformTenantCreatePayload {
+  restaurantName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  plan?: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  seatsLimit?: number;
+  timezone?: string;
+  currency?: string;
+  taxRate?: number;
+}
+
+/** POST /api/platform/tenants response — detail shape plus the first ADMIN. */
+export interface PlatformTenantCreateResponse {
+  data: PlatformTenantDetail;
+  user: { id: string; email: string; tenantId: string; role: string };
+}
 /** Operator-only commercial state update (PATCH /api/platform/tenants/:id). */
 export interface PlatformTenantUpdatePayload {
   plan?: PlanTier;
