@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePlatformAdmin } from '../middleware/rbac';
 import {
   listPlatformTenants,
+  createPlatformTenant,
   getPlatformTenant,
   updatePlatformTenant,
   listAttentionTenants,
@@ -21,6 +22,7 @@ router.use(authenticate);
 router.use(requirePlatformAdmin());
 
 router.get('/tenants', listPlatformTenants);
+router.post('/tenants', createPlatformTenant);
 router.get('/attention', listAttentionTenants);
 router.get('/tenants/:tenantId', getPlatformTenant);
 router.patch('/tenants/:tenantId', updatePlatformTenant);

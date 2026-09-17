@@ -1,8 +1,10 @@
 import { NextFunction, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import prisma from '../services/database';
 import { AuthRequest } from '../middleware/auth';
 import { httpError } from '../utils/http-error';
-import { platformListQuerySchema, platformTenantUpdateSchema, validateBody, validateQuery } from '../utils/validation';
+import { platformListQuerySchema, platformTenantCreateSchema, platformTenantUpdateSchema, validateBody, validateQuery } from '../utils/validation';
+import { createTenantWithAdmin } from '../services/tenant-onboarding';
 import { writeAuditLog, listAuditLogs } from '../services/audit';
 
 /**
@@ -185,6 +187,69 @@ export async function getPlatformTenant(req: AuthRequest, res: Response, next: N
         billing: { seatsUsed, seatsLimit: tenant.seatsLimit },
         recentChanges: history.data,
       },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/platform/tenants — operator provisions a workspace + first ADMIN.
+ *
+ * S5 follow-up to self-serve onboarding (POST /api/tenants): one audited call
+ * sets commercial state upfront (plan/status/seats) instead of create-as-TRIAL
+ * then PATCH. Reuses createTenantWithAdmin tenant+ADMIN+menu transaction, then
+ * writes the same `platform:tenant.updated` audit row a PATCH would, scoped to
+ * the NEW tenant. Returns the GET detail shape (billing + empty history).
+ */
+export async function createPlatformTenant(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const data = validateBody(platformTenantCreateSchema, req.body);
+    const passwordHash = await bcrypt.hash(data.password, 12);
+
+    const { tenant, user } = await createTenantWithAdmin({
+      restaurantName: data.restaurantName,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      passwordHash,
+      timezone: data.timezone,
+      currency: data.currency,
+      taxRate: data.taxRate,
+      plan: data.plan,
+      subscriptionStatus: data.subscriptionStatus,
+      seatsLimit: data.seatsLimit,
+    });
+
+    await writeAuditLog({
+      tenantId: tenant.id, // audit rows live in the AFFECTED tenant's scope
+      actorId: platformActor(req),
+      action: 'platform:tenant.updated',
+      targetType: 'Tenant',
+      targetId: tenant.id,
+      metadata: {
+        changes: {
+          created: { from: null, to: tenant.slug },
+          plan: { from: null, to: data.plan },
+          subscriptionStatus: { from: null, to: data.subscriptionStatus },
+          seatsLimit: { from: null, to: data.seatsLimit },
+        },
+        surface: 'platform-provision',
+      },
+    });
+
+    const detail = await prisma.tenant.findUnique({
+      where: { id: tenant.id },
+      include: { _count: { select: { users: true, orders: true, menus: true, inventory: true, suppliers: true } } },
+    });
+
+    res.status(201).json({
+      data: {
+        ...detail,
+        billing: { seatsUsed: detail?._count.users ?? 1, seatsLimit: data.seatsLimit },
+        recentChanges: [],
+      },
+      user: { id: user.id, email: user.email, tenantId: user.tenantId, role: user.role },
     });
   } catch (e) {
     next(e);

@@ -659,6 +659,26 @@ export const platformTenantUpdateSchema = Joi.object({
   isActive: Joi.boolean(),
 }).min(1);
 
+/** S5 — operator provisions a workspace + first ADMIN in one audited call. */
+export const platformTenantCreateSchema = Joi.object({
+  restaurantName: Joi.string().trim().min(2).max(120).required(),
+  firstName: Joi.string().trim().min(1).max(100).required(),
+  lastName: Joi.string().trim().min(1).max(100).required(),
+  email: Joi.string().email().max(255).required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .required(),
+  plan: Joi.string().valid('TRIAL', 'BASIC', 'PRO', 'ENTERPRISE').default('TRIAL'),
+  subscriptionStatus: Joi.string().valid('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED').default('TRIAL'),
+  seatsLimit: Joi.number().integer().min(1).max(10_000).default(10),
+  timezone: Joi.string().trim().max(64),
+  currency: currencyCode,
+  taxRate: Joi.number().min(0).max(100).precision(2),
+});
+
 /** GET /api/platform/tenants list filters. */
 export const platformListQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),

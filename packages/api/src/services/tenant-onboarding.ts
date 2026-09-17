@@ -28,6 +28,10 @@ export interface OnboardingInput {
   timezone?: string;
   currency?: string;
   taxRate?: number;
+  /** S5 — operator provisioning: set commercial state at creation (local/onboarding paths ignore). */
+  plan?: 'TRIAL' | 'BASIC' | 'PRO' | 'ENTERPRISE';
+  subscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELLED';
+  seatsLimit?: number;
 }
 
 export interface OnboardingResult {
@@ -68,6 +72,11 @@ export async function createTenantWithAdmin(input: OnboardingInput): Promise<Onb
         timezone: input.timezone ?? 'UTC',
         currency: input.currency ?? 'USD',
         taxRate: input.taxRate ?? 0,
+        // S5 operator provisioning — commercial state at creation; Prisma falls
+        // back to schema defaults when undefined, so self-serve is unaffected.
+        ...(input.plan ? { plan: input.plan } : {}),
+        ...(input.subscriptionStatus ? { subscriptionStatus: input.subscriptionStatus } : {}),
+        ...(input.seatsLimit !== undefined ? { seatsLimit: input.seatsLimit } : {}),
       },
     });
 

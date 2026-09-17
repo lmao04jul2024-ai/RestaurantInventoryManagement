@@ -55,7 +55,7 @@ const auditCount = prisma.auditLog.count as jest.Mock;
 const auditFindMany = prisma.auditLog.findMany as jest.Mock;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  findUniqueMock.mockResolvedValue(platformTenantRow);
   auditCreate.mockResolvedValue({});
   // S2.4 — the detail read also pulls the operator change trail.
   auditCount.mockResolvedValue(0);
@@ -124,6 +124,93 @@ describe('S2.2 — platform tenant list', () => {
     const args = (prisma.tenant.findMany as jest.Mock).mock.calls[0][0];
     expect(args.where.OR[0]).toMatchObject({ name: { contains: 'bistro', mode: 'insensitive' } });
     expect(args.where.OR[1]).toMatchObject({ slug: { contains: 'bistro', mode: 'insensitive' } });
+  });
+});
+
+describe('S5 — operator provisions a workspace + first ADMIN', () => {
+  it('201s tenant+ADMIN in one audited call with commercial state set upfront', async () => {
+    (prisma.tenant.findUnique as jest.Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        ...platformTenantRow,
+        id: 'new-tenant-id',
+        name: 'New Diner',
+        slug: 'new-diner',
+        plan: 'PRO',
+        subscriptionStatus: 'ACTIVE',
+        seatsLimit: 25,
+        _count: { users: 1, orders: 0, menus: 1, inventory: 0, suppliers: 0 },
+      });
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const txTenantCreate = jest.fn().mockResolvedValue({ id: 'new-tenant-id', name: 'New Diner', slug: 'new-diner' });
+      const txUserCreate = jest.fn().mockResolvedValue({
+        id: 'new-user-id',
+        email: 'owner@newdiner.example.com',
+        tenantId: 'new-tenant-id',
+        role: UserRole.ADMIN,
+      });
+      return fn({
+        tenant: { create: txTenantCreate },
+        user: { create: txUserCreate },
+        menu: { create: jest.fn().mockResolvedValue({}) },
+      });
+    });
+
+    const res = await request(app)
+      .post('/api/platform/tenants')
+      .set('Authorization', `Bearer ${platformToken}`)
+      .send({
+        restaurantName: 'New Diner',
+        firstName: 'Nina',
+        lastName: 'Owner',
+        email: 'owner@newdiner.example.com',
+        password: 'Str0ngPass!',
+        plan: 'PRO',
+        subscriptionStatus: 'ACTIVE',
+        seatsLimit: 25,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.slug).toBe('new-diner');
+    expect(res.body.data.billing).toEqual({ seatsUsed: 1, seatsLimit: 25 });
+    expect(res.body.user).toMatchObject({ email: 'owner@newdiner.example.com', role: UserRole.ADMIN });
+    expect(auditCreate).toHaveBeenCalledTimes(1);
+    expect(auditCreate.mock.calls[0][0].data).toMatchObject({
+      tenantId: 'new-tenant-id',
+      action: 'platform:tenant.updated',
+      targetType: 'Tenant',
+      targetId: 'new-tenant-id',
+    });
+  });
+
+  it('403s a tenant ADMIN — operators only', async () => {
+    const res = await request(app)
+      .post('/api/platform/tenants')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        restaurantName: 'Blocked Bistro',
+        firstName: 'B',
+        lastName: 'Locked',
+        email: 'b@locked.test',
+        password: 'Str0ngPass!',
+      });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN_ROLE');
+  });
+
+  it('400s a weak admin password', async () => {
+    const res = await request(app)
+      .post('/api/platform/tenants')
+      .set('Authorization', `Bearer ${platformToken}`)
+      .send({
+        restaurantName: 'Weak Diner',
+        firstName: 'W',
+        lastName: 'Eak',
+        email: 'w@eak.test',
+        password: 'weak',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
