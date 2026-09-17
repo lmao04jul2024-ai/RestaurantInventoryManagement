@@ -241,7 +241,7 @@ This document breaks down the 24-week implementation plan into actionable tasks 
 ### S-Week 4: Launch Readiness (Phase E)
 - [ ] **S4.1** Single production deployment (existing Docker/compose → cloud host, managed Postgres, backups verified)
 - [x] **S4.2** Per-tenant log tagging + monitoring hooks (extends docs/deployment OPERATIONS runbooks) *(structured winston logger (JSON→stdout, LOG_LEVEL) — attachLogContext (X-Request-Id echo/generate) + requestLogger finish-hook resolving tenantId AFTER auth (context→JWT→X-Tenant-ID); errorHandler 5xx → tagged server_error records; OPERATIONS.md runbook section with per-tenant filtering + alert hooks; 5 tests in observability.spec.ts)*
-- [ ] **S4.3** Marketing site: pricing page (manual-billing "contact to subscribe" CTA, no checkout), demo video, trial signup funnel to /onboarding
+- [x] **S4.3** Marketing site: pricing page (manual-billing "contact to subscribe" CTA, no checkout), demo video, trial signup funnel to /onboarding *(public /pricing — 4 tier cards reusing plan semantics, Trial→/onboarding funnel, paid tiers → mailto NEXT_PUBLIC_SALES_EMAIL (default sales@yourapp.com), demo-video placeholder section, landing-page links; 2 tests; no payment processor anywhere per Phase B)*
 - [ ] **S4.4** Go-live checklist update in docs/deployment for multi-tenant operations (tenant provisioning runbook, offboarding/data-retention policy)
 
 **Dependencies:** S-Week 1 is critical path (data-leak risk before selling). S-Week 2 depends on S1.1/S1.2 passing. S-Week 3/4 are parallelizable after S-Week 2.

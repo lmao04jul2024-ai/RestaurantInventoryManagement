@@ -30,6 +30,17 @@ export default function Home() {
           <p className="mt-6 text-xs text-content-muted">
             Customers: sign in to browse the menu and order online · Staff workspace requires sign-in
           </p>
+          <p className="mt-2 text-xs text-content-muted">
+            New here?{' '}
+            <Link href="/pricing" className="font-medium text-primary-700 hover:underline">
+              See pricing
+            </Link>{' '}
+            — or{' '}
+            <Link href="/onboarding" className="font-medium text-primary-700 hover:underline">
+              start a 30-day free trial
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </main>
