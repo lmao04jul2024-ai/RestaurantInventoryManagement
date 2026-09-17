@@ -230,10 +230,28 @@ export async function updatePlatformTenant(req: AuthRequest, res: Response, next
       return res.json({ data: tenant });
     }
 
-    const updated = await prisma.tenant.update({ where: { id: tenantId }, data: updateData });
+    const updated = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: updateData,
+      include: { _count: { select: { users: true, orders: true, menus: true, inventory: true, suppliers: true } } },
+    });
     await auditPlatformChange(req, tenantId, changes);
 
-    res.json({ data: updated });
+    // Re-read the operator change trail so the response keeps the GET detail
+    // shape — the console swaps this payload straight into its cache.
+    const history = await listAuditLogs({
+      tenantId,
+      action: 'platform:tenant.updated',
+      limit: HISTORY_LIMIT,
+    });
+
+    res.json({
+      data: {
+        ...updated,
+        billing: { seatsUsed: updated._count.users, seatsLimit: updated.seatsLimit },
+        recentChanges: history.data,
+      },
+    });
   } catch (e) {
     next(e);
   }

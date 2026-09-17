@@ -203,6 +203,10 @@ describe('S2.2/S2.3 — platform tenant detail & audited updates', () => {
       plan: { from: 'TRIAL', to: 'PRO' },
       subscriptionStatus: { from: 'TRIAL', to: 'ACTIVE' },
     });
+    // The PATCH response keeps the GET detail shape so the console can swap
+    // it straight into its cache (billing + refreshed change history).
+    expect(res.body.data.billing).toEqual({ seatsUsed: 5, seatsLimit: 10 });
+    expect(res.body.data.recentChanges).toEqual([]);
   });
 
   it('a no-op PATCH persists and audits nothing', async () => {
