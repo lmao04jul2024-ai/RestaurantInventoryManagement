@@ -10,12 +10,14 @@ import {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
   validateBody,
 } from '../utils/validation';
 import { TenantRequest } from '../middleware/tenant';
 import { AuthRequest } from '../middleware/auth';
 import { runWithTenant } from '../services/tenant-context';
 import { seatsService } from '../services/seats';
+import { writeSecurityEvent } from '../services/audit';
 import {
   sendAccountVerification,
   sendPasswordResetEmail,
@@ -354,6 +356,82 @@ export async function resetPassword(req: TenantRequest, res: Response, next: Nex
     ]);
 
     res.json({ message: 'Password has been reset successfully. Please log in.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/auth/password — self-service password change for the signed-in user.
+ *
+ * Works for EVERY role, including PLATFORM_ADMIN: this route intentionally does
+ * NOT pass through resolveTenant (that middleware rejects the operator role on
+ * tenant surfaces with 403 PLATFORM_ADMIN_FORBIDDEN) and it scopes the write to
+ * the caller's own userId instead of a tenant + user pair. The operator console
+ * therefore gets a real "change my password" path instead of the email-reset
+ * round trip.
+ *
+ * The current password must be presented — an access token alone (e.g. one
+ * lifted from localStorage) must never be enough to rotate a credential.
+ * Success revokes every session for the user: a credential change invalidates
+ * all refresh tokens, and the caller signs back in (access tokens are stateless
+ * and expire within JWT_EXPIRES_IN, 15m by default).
+ */
+export async function changePassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHENTICATED', message: 'Authentication required' },
+      });
+    }
+
+    const { currentPassword, newPassword } = validateBody(changePasswordSchema, req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        error: { code: 'USER_INACTIVE', message: 'Account not found or deactivated' },
+      });
+    }
+
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(400).json({
+        error: {
+          code: 'CURRENT_PASSWORD_INCORRECT',
+          message: 'Your current password is incorrect',
+        },
+      });
+    }
+
+    if (await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({
+        error: {
+          code: 'PASSWORD_UNCHANGED',
+          message: 'Choose a password different from your current one',
+        },
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      }),
+      // Single-use posture: every refresh session dies with the old credential.
+      prisma.session.deleteMany({ where: { userId: user.id } }),
+    ]);
+
+    // Week 22.6 — security trail (fail-open: never blocks the change itself).
+    await writeSecurityEvent({
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'auth.password_changed',
+    });
+
+    res.json({ message: 'Password updated. Please sign in again with your new password.' });
   } catch (error) {
     next(error);
   }

@@ -6,9 +6,10 @@ import {
   logout,
   forgotPassword,
   resetPassword,
+  changePassword,
 } from '../controllers/auth.controller';
 import { resolveTenant } from '../middleware/tenant';
-import { optionalAuthenticate } from '../middleware/auth';
+import { optionalAuthenticate, authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -26,5 +27,10 @@ router.post('/reset-password', resetPassword);
 
 // Authenticated routes
 router.post('/logout', optionalAuthenticate, logout);
+// Self-service password change. Deliberately NOT resolveTenant-gated: the
+// platform operator must be able to rotate their own credential, and
+// resolveTenant rejects PLATFORM_ADMIN on tenant surfaces. The handler scopes
+// the write to req.user.userId, so no tenant context is needed.
+router.patch('/password', authenticate, changePassword);
 
 export default router;

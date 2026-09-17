@@ -29,6 +29,7 @@ curl http://localhost:3001/api/menus -H "Authorization: Bearer $TOKEN"
 | `POST /api/auth/login` | Mint access + refresh tokens |
 | `POST /api/auth/refresh` | Rotate an expired access token |
 | `POST /api/auth/forgot-password` / `reset-password` | Password recovery |
+| `PATCH /api/auth/password` | Change your own password (any role, incl. the platform operator) |
 | `POST /api/tenants` | Onboard a new tenant (creates ADMIN) |
 
 Access tokens are short-lived JWTs carrying `userId`, `tenantId`, `role` and
@@ -120,6 +121,10 @@ Consequences for tenant-facing surfaces:
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Body/query/params failed Joi schema (`details[]` names the fields) |
 | `UNAUTHENTICATED` | 401 | Missing/expired token |
+| `INVALID_CREDENTIALS` | 401 | Login email/password mismatch (uniform — never reveals which) |
+| `USER_INACTIVE` | 401 | Account missing or deactivated (refresh / password change) |
+| `CURRENT_PASSWORD_INCORRECT` | 400 | `PATCH /api/auth/password` without the right current password |
+| `PASSWORD_UNCHANGED` | 400 | New password repeats the current one |
 | `FORBIDDEN_ROLE` | 403 | Authenticated but the wrong role for this surface (e.g. tenant ADMIN on `/api/platform/*`) |
 | `PLATFORM_ADMIN_FORBIDDEN` | 403 | `PLATFORM_ADMIN` attempted a tenant surface — the operator role has no tenant context |
 | `FORBIDDEN_PERMISSION` | 403 | Authenticated but lacking permission (or deny-override) |

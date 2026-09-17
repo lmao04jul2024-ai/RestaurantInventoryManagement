@@ -41,6 +41,21 @@ export const resetPasswordSchema = Joi.object({
 });
 
 /**
+ * Self-service password change for the signed-in user (PATCH /api/auth/password).
+ * The current password is mandatory: possessing an access token alone must never
+ * be enough to rotate a credential. Same policy as register/reset.
+ */
+export const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .message('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .required(),
+});
+
+/**
  * Validates request body against a Joi schema.
  * Throws a structured error handled by the global error handler.
  */

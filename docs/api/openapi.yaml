@@ -153,6 +153,35 @@ paths:
       security: []
       responses:
         "204": { description: Session revoked }
+  /api/auth/password:
+    patch:
+      tags: [Auth]
+      summary: Change your own password
+      description: |
+        Self-service credential rotation for the signed-in user. Deliberately
+        NOT tenant-gated (`req.user.userId` scopes the write), so the platform
+        operator (PLATFORM_ADMIN) can rotate their credential from the console
+        even though `resolveTenant` rejects that role on tenant surfaces.
+
+        Requires the current password — an access token alone is never enough.
+        Success revokes **every** refresh session for the user (all devices), so
+        the caller must sign in again. `400 CURRENT_PASSWORD_INCORRECT` /
+        `400 PASSWORD_UNCHANGED` are recoverable; `401 USER_INACTIVE` means the
+        account was deactivated.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8 }
+      responses:
+        "200":
+          description: Password updated — all sessions revoked, sign in again
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   # ── Tenants ─────────────────────────────────────────────────────────────
 
