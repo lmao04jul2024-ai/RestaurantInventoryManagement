@@ -2,6 +2,7 @@ import api from '@/lib/api';
 import type {
   AuthTokens,
   AuthUser,
+  ChangePasswordPayload,
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
@@ -34,6 +35,17 @@ export const authService = {
 
   async resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
     const { data } = await api.post<{ message: string }>('/auth/reset-password', payload);
+    return data;
+  },
+
+  /**
+   * Self-service password change for the signed-in user — the same call serves
+   * every role, including the PLATFORM_ADMIN operator (the API route is not
+   * tenant-gated). Success revokes every session server-side, so callers must
+   * sign the user out afterwards.
+   */
+  async changePassword(payload: ChangePasswordPayload): Promise<{ message: string }> {
+    const { data } = await api.patch<{ message: string }>('/auth/password', payload);
     return data;
   },
 };

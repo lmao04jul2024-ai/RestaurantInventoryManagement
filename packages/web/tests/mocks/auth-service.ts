@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 export const mockLogin = jest.fn();
 export const mockRegister = jest.fn();
 export const mockLogout = jest.fn();
+export const mockChangePassword = jest.fn();
 
 /**
  * Replaces the auth HTTP layer so the REAL `useAuth` hook can be exercised
@@ -14,5 +15,6 @@ jest.mock('@/services/auth.service', () => ({
     login: mockLogin,
     register: mockRegister,
     logout: mockLogout,
+    changePassword: mockChangePassword,
   },
 }));

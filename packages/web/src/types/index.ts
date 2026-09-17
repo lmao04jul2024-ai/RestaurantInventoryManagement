@@ -49,6 +49,12 @@ export interface ResetPasswordPayload {
   password: string;
 }
 
+/** Self-service password change for the signed-in user (PATCH /auth/password). */
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 /** Standard error envelope returned by the API error handler */
 export interface ApiErrorShape {
   error: {
