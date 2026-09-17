@@ -1,4 +1,28 @@
+# Session 2026-09-17 (c) — Hosting plan selection for the whole stack (advisory, no code change)
+
+## Question
+"which one should I choose to host the whole project?" — https://www.himalayanhost.com/store/linux-cloud-vps-and-dedicated-servers
+
+## Plan
+- [x] Scrape the vendor category page (headless Chrome) → the page lists **4 VPS plans only** (no real dedicated servers)
+- [x] Measure this repo's real resource footprint (docker image sizes, build cache, volumes, build-time env baking)
+- [x] Map footprint → smallest viable plan / recommended plan / traps
+- [x] Record the sizing evidence + decision in memory (this session) and lesson L057
+
+## Review (2026-09-17)
+- **Catalogue (13% VAT incl.):** Entry Cloud 1.5vCPU/2GB/24GB/1TB EU NPR 1,200; Managed Cloud 3vCPU/4GB/48GB/2TB EU NPR 2,500;
+  KTM Small 2vCPU/4GB/50GB unlimited NPR 3,500 (non-refundable); KTM Medium 4vCPU/8GB/100GB unlimited NPR 7,000 (non-refundable).
+- **Footprint measured:** images web 956MB + api 844MB + postgres 408MB + redis 59MB ≈ 2.3GB; Docker build cache 22GB in local dev;
+  dev Postgres volume 117MB; `next build`/`npm ci` peak ~1.5–3GB RAM.
+- **Verdict:** 2GB/24GB Entry Cloud is unusable (OOM on `next build`, disk too tight). Viable floor = 4GB/50GB.
+  Recommended = **KTM Medium (4vCPU/8GB/100GB, NPR 7,000)** for a one-box prod with Nepal latency;
+  value pick = **Xeon Managed Cloud (3vCPU/4GB/48GB, NPR 2,500)** if EU latency + managed backups are acceptable.
+- **Pre-launch blockers surfaced (not fixed this session):** `docker-compose.yml` hardcodes secrets + publishes
+  Postgres/Redis on all interfaces; `NEXT_PUBLIC_API_URL=http://localhost:3001` is baked at build time; no TLS edge/wildcard
+  cert for `TENANT_ROOT_DOMAIN` subdomains; nightly `scripts/backup.sh` cron + offsite copy not yet scheduled.
+
 # Session 2026-09-17 (b) — Self-service password change (platform operator) + console column rationale
+
 
 ## Report
 - "fix password change for /platform platform admin": there was **no** in-app password change anywhere —

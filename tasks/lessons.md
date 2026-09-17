@@ -1,5 +1,11 @@
 # Lessons Learned
 
+## L057 — Termination memory push skipped AGAIN (L001 recurrence) + sizing advice must be measured, not vibed
+- **Date:** 2026-09-17 (session c — hosting-plan advisory)
+- **Failure pattern:** the previous task ended without the Task-Termination memory push, so the rules system logged the CRITICAL FAULT a second time. Root cause is process, not tooling: the push lives at the *end* of the response, which is exactly where context is thinnest. **Rule:** treat `[MEMORY BANK: UPDATED]` as a required deliverable of every task (including pure Q&A with zero code changes), and write the memory update *before* composing the final answer — not after.
+- **Advisory-task rule (new this session):** when the user asks an infrastructure/hosting/vendor question, answer from **measured numbers in the repo**, never from generic rules of thumb. Evidence gathered here: prod images `web 956MB + api 844MB + postgres 408MB + redis 59MB ≈ 2.3GB` on disk, Docker build cache grew to `22GB` in local dev, dev Postgres volume `117MB`, `NEXT_PUBLIC_API_URL` is **baked at build time** (so it must be the public API origin at image-build, not `localhost:3001` as in `docker-compose.yml`), and `docker-compose.yml` publishes 5433/6379/3000/3001 on **all interfaces with hardcoded secrets** — a prod compose + TLS edge is a prerequisite, not a nicety.
+- **Conclusion recorded:** smallest *viable* box = 4GB RAM / 50GB NVMe (2GB OOMs on `next build`); the 24GB/2GB Entry Cloud tier is a trap for this repo.
+
 ## L056 — "Fix feature X" can mean "feature X was never built": reproduce before designing the repair
 - **Date:** 2026-09-17
 - **Symptom:** User reported "fix password change for /platform platform admin". Grep found **no** change-password UI and **no** authenticated password endpoint anywhere in the app; a live headless-Chrome check of `/platform/tenants` (signed in as `platform@yourapp.com`) showed the avatar menu containing only *Sign out*. The only password path was the email reset flow (`forgot-password` → `/reset-password?token=`).
