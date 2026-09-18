@@ -31,6 +31,10 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SALES_EMAIL=$NEXT_PUBLIC_SALES_EMAIL
 RUN npm run build --workspace=@restaurant/web
 
+# Next.js listens on 3000 by default; Railway routes traffic to this port.
+ENV PORT=3000
+EXPOSE 3000
+
 # Start the Next.js production server.
 CMD ["npm", "start", "--workspace=@restaurant/web"]
 
